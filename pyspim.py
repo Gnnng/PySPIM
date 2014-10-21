@@ -70,108 +70,75 @@ class Control(object):
 # c._signal_convert('0101000100000001000000')
 # print(c.signals)
 
-class Alu(object):
-
-    def __init__(self, control):
-        self.control = control
-        self.overflow = 0
-        self.zero = 0
-    def calc(self, op1, op2):
-        operation = self.control.signals['ALUop']
-        result = 0
-        self.overflow = 0
-        if operation == aop.AND:
-            result = (op1 & op2) & 0xffffffff
-        if operation == aop.OR:
-            result = (op1 | op2) & 0xffffffff
-        if operation == aop.ADD:
-            result = op1 + op2
-            if op1 > 0 and op2 > 0 and result > 0x7fffffff:
-                self.overflow = 1
-            if op1 < 0 and op2 < 0 and result < -2 * 2**31:
-                self.overflow = 1
-            result = result & 0xffffffff
-        if operation == aop.SUB:
-            result = op1 - op2
-            if op1 > 0 and op2 < 0 and result > 0x7fffffff:
-                self.overflow = 1
-            if op1 < 0 and op2 > 0 and result < -2 * 2**31:
-                self.overflow = 1
-            result = result & 0xffffffff
-        if operation == aop.SLT:
-            if op1 < op2:
-                result = 1
-            else:
-                result = 0
-        if operation == aop.XOR:
-            result = (op1 ^ op2) & 0xffffffff
-        if operation == aop.SLL:
-            result = (op1 << op2) & 0xffffffff
-        if operation == aop.SRL:
-            result = (op1 >> op2) & 0xffffffff
-        if operation == aop.SRA:
-            result = (op1 >> op2) & 0xffffffff
-        if operation == aop.NOR:
-            result = (~(op1 | op2)) & 0xffffffff
-        if result == 0:
-            self.zero = 1
+def alu_calc(operation, op1, op2):
+    result, overflow, carry = 0, False, False
+    signed_32 = lambda x: {0: x, 1: -(2**32 - x)}[(x >> 31) & 1]
+    if operation == aop.AND:
+        result = (op1 & op2) & 0xffffffff
+    if operation == aop.OR:
+        result = (op1 | op2) & 0xffffffff
+    if operation == aop.ADD:
+        sop1 = signed_32(op1)
+        sop2 = signed_32(op2)
+        result = sop1 + sop2
+        overflow = (sop1 > 0 and sop2 > 0 and result > 0x7fffffff) or \
+            (sop1 < 0 and sop2 < 0 and result < -2 * 2**31)
+        result = signed_32(result & 0xffffffff)
+    if operation == aop.SUB:
+        sop1 = signed_32(op1)
+        sop2 = signed_32(op2)
+        result = sop1 - sop2
+        overflow = (sop1 > 0 and sop2 < 0 and result > 0x7fffffff) or \
+            (sop1 < 0 and sop2 > 0 and result < -2 * 2**31)
+        result = signed_32(result & 0xffffffff)
+    if operation == aop.SLT:
+        if op1 < op2:
+            result = 1
         else:
-            self.zero = 0
-        return result
+            result = 0
+    if operation == aop.XOR:
+        result = (op1 ^ op2) & 0xffffffff
+    if operation == aop.SLL:
+        result = (op1 << op2) & 0xffffffff
+    if operation == aop.SRL:
+        result = (op1 >> op2) & 0xffffffff
+    if operation == aop.SRA:
+        result = (op1 >> op2) & 0xffffffff
+    if operation == aop.NOR:
+        result = (~(op1 | op2)) & 0xffffffff
+    if operation == aop.ADDU:
+        result = op1 + op2
+        carry = result > 2**32
+    if operation == aop.SUBU:
+        result = op1 - op2
+        carry = result < 0
+    return (result, result == 0, carry, overflow)
 
 class Cpu(object):
     
     def __init__(self, bus):
         self.pc = 0
-        self.last_pc = 0
         self.reg_file = [0] * 32
         self.bus = bus
-        self.control = Control(bus)
         self.alu = Alu()
-        self.signals = None
-        self.pc_new = 0
-        self.alu_out = 0
-        self.ir = None
+        self.instruction = 0
 
     def step(self):
-        """Run one instruction"""
-        i = 12
-        while True:
-            print('Running at', i)
-            self.control.next_state() # enter new state
-            self.signals = self.control.signals
+        """run one instruction at one time"""
+        inst = self.bus.read()
+        self.instruction = inst
+        opcode = (inst >> 26) & 0x3f
+        rs = (inst >> 21) & 0x1f
+        rt = (inst >> 16) & 0x1f
+        rd = (inst >> 11) & 0x1f
+        shamt = (inst >> 6) & 0x1f
+        func = (inst) & 0x3f
+        imme = (inst) & 0xffff 
 
-            if re
+        if opcode == 0b000000:
+            # r - type
+            if func == 0b100000
 
-            if self.signals['ALUsrcA'] == '1':
-                op1 = regA
-            else:
-                op1 = self.pc
-
-            if self.signals['ALUsrcB'] == '00':
-                op2 = regB
-            elif self.signals['ALUsrcB'] == '01':
-                op2 = 4
-            elif self.signals['ALUsrcB'] == '10':
-                op2 = ext_32
-            else:
-                op2 = ext_32_sl
-            self.alu.calc(op1, op2)
-
-            if self.signals['PCWrite'] == '1' or (self.signals['PCWriteCond'] \
-                == '1' and (self.alu.zero ^ self.signals['Beq'])):
-                pc = pc_new
-            else:
-                pc = 0
-            if self.control.state == fsm.IF:
-                self.control.instruction = self.bus.read(self.pc)
-            if self.control.state == fsm.ID:
-
-
-            # print(signals)
-            i = i - 1
-            if i == 0:
-                break
 
 class Bus(object):
     def __init__(self, ram):
@@ -199,17 +166,12 @@ class VideoRam(object):
         pass
 
 class VirtualMachine(object):
-
     byteWidth = 16
-
-
     def __init__(self, ram):
-        self.reset = True
         self.ram = Ram(ram)
-        self.vram = VideoRam()
         self.bus = Bus(self.ram)
         self.cpu = Cpu(self.bus)
-        self.alu = Alu(self.control)
+
     def run(self):
         self.cpu.run()
 
