@@ -72,7 +72,7 @@ class Control(object):
 
 class Alu(object):
 
-    def __ini__(self, control):
+    def __init__(self, control):
         self.control = control
         self.overflow = 0
         self.zero = 0
@@ -127,6 +127,7 @@ class Cpu(object):
         self.reg_file = [0] * 32
         self.bus = bus
         self.control = Control(bus)
+        self.alu = Alu()
         self.signals = None
         self.pc_new = 0
         self.alu_out = 0
@@ -139,8 +140,29 @@ class Cpu(object):
             print('Running at', i)
             self.control.next_state() # enter new state
             self.signals = self.control.signals
-            if self.signals['PCWrite'] == '1' or (self.sig)
-            self.pc_new_signal = self.signals['PCWrite'] 
+
+            if re
+
+            if self.signals['ALUsrcA'] == '1':
+                op1 = regA
+            else:
+                op1 = self.pc
+
+            if self.signals['ALUsrcB'] == '00':
+                op2 = regB
+            elif self.signals['ALUsrcB'] == '01':
+                op2 = 4
+            elif self.signals['ALUsrcB'] == '10':
+                op2 = ext_32
+            else:
+                op2 = ext_32_sl
+            self.alu.calc(op1, op2)
+
+            if self.signals['PCWrite'] == '1' or (self.signals['PCWriteCond'] \
+                == '1' and (self.alu.zero ^ self.signals['Beq'])):
+                pc = pc_new
+            else:
+                pc = 0
             if self.control.state == fsm.IF:
                 self.control.instruction = self.bus.read(self.pc)
             if self.control.state == fsm.ID:
