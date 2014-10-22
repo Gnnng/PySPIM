@@ -1,0 +1,9 @@
+.data
+hi: .ascii "abcd"
+.text
+addi $t0,$t1,100
+Hello: 
+add $s0,$s1,$s2
+or $s0,$s1,$t0
+beq $t0,$t1,Hello
+la $t0,hi
