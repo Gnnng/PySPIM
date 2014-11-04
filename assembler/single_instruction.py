@@ -9,40 +9,65 @@ class UserInstruction:
 			self.note=None
 			self.content=None
 			self.code=None
+			self.type=None
 		else:
-			label_regular=re.compile(' *(.*): *(.*)')
-			label_match=label_regular.match(origin_instruction)
-			if (label_match):
-				self.label=label_match.group(1)
-				# print (self.label)
-				# print (label_match)
-				nolabel_instruction=label_match.group(2)
-				# print (nolabel_instruction)
+			self.code=None
+			self.label=None
+			self.note=None
+			self.content=None
+			self.code=None
+			self.type=None
+			print("instruction init")
+			self.add_instruction(origin_instruction)
+	def add_instruction(self,origin_instruction):
+		print("entered add_instruction")
+		print("oins:"+origin_instruction)
+		label_regular=re.compile('^ *([A-Za-z0-9_]*?): *(.*)')
+		label_match=label_regular.match(origin_instruction)
+		if (label_match):
+			print ("matched")
+			print (label_match.group(2))
+			if (self.label==None):
+				self.label=[label_match.group(1).strip()]
 			else:
-				self.label=None
-				nolabel_instruction=origin_instruction
-			self.add_content(nolabel_instruction)
+				self.label+=[label_match.group(1).strip()]
+			# print (self.label)
+			# print (label_match)
+			nolabel_instruction=label_match.group(2)
+			# print (nolabel_instruction)
+		else:
+			print("not matched")
+			nolabel_instruction=origin_instruction
+		print ("nolabel_ins:"+nolabel_instruction)
+		self.add_content(nolabel_instruction)
 	def add_content(self,nolabel_instruction):
+		print("===entered add_content===")
+		print("now label:",self.label)
 		note_regular=re.compile('(.*) *#(.*)')
 		note_match=note_regular.match(nolabel_instruction)
 		if (note_match):
 			self.note=note_match.group(2)
 			self.content=note_match.group(1)
+			print ("final content:"+self.content)
 		else:
 			self.note=None
 			self.content=nolabel_instruction
 		self.format()
 	def format(self):
 		if (self.content):
-			self.content.strip(' ')
+			self.content=self.content.strip()
 		if (self.note):
-			self.note.strip(' ')
+			self.note=self.note.strip()
 		if (self.label):
-			self.label.strip(' ')
+			for each_label in self.label:
+				each_label=each_label.strip()
 def single_encode(input_instruction,label_list,index):
 	# print(input_instruction)
-	operator=input_instruction.split(' ')[0]
-	other_asm=input_instruction.split(' ')[1]
+	operator=input_instruction.split()[0]
+	other_asm=""
+	other_asm=other_asm.join(input_instruction.split()[1:])
+	input_instruction=input_instruction.strip()
+	print ("now trans:"+other_asm)
 	# print (other_asm)
 	try:
 		code=instruction_template[operator].mips_code(other_asm,index,label_list)
@@ -50,8 +75,9 @@ def single_encode(input_instruction,label_list,index):
 	except KeyError:
 		raise ValueError('no such operator called:'+operator)
 def pesudo_encode(input_instruction,var_list):
-	operator=input_instruction.content.split(' ')[0]
-	other_asm=input_instruction.content.split(' ')[1]
+	operator=input_instruction.content.split()[0]
+	other_asm=""
+	other_asm=other_asm.join(input_instruction.content.split()[1:])
 	# real_list=[]
 	if (operator in pesudo_list):
 		# real_list=encode_pesudo_la(other_asm,var_list)
@@ -63,7 +89,9 @@ def pesudo_encode(input_instruction,var_list):
 	for real in real_list:
 		temp=UserInstruction()
 		temp.content=real
+		temp.type='text'
 		real_instrution+=[temp]
 	real_instrution[0].label=input_instruction.label
 	real_instrution[0].note=input_instruction.note
+	real_instrution[0].type='text'
 	return real_instrution
