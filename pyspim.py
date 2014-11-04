@@ -3,6 +3,9 @@
 import sys
 import control_fsm as fsm
 import alu_operation as aop
+import pygame
+import threading
+from pygame.locals import *
 
 RESET = 0
 
@@ -63,17 +66,48 @@ class Cpu(object):
     def __init__(self, bus):
         self.pc = 0
         self.reg_file = [0] * 32
+        self.cp0_reg_file = [0] * 32
         self.bus = bus
         self.instruction = 0
         self.zero = False
         self.carry = False
         self.overflow = False
+        self.keyboard_int = False
+        self.cp0_name = {
+            'status': 12,
+            'cause': 13,
+            'epc': 14
+        }
+        self.int_all_address = 4
+        self.int_vector_table = 0x100
+        self.cp0_reg_file[12] |= 1 # enable int
+
+    def is_int_enable(self):
+        if (self.cp0_reg_file[cp0_name['status']] & 1) != 0:
+            return True
+        return False
+
+    def is_int_level(self):
+        if (self.cp0_reg_file[cp0_name['status']] & 0b10) != 0:
+            return True
+        return False
+
+    def set_excode(self, code):
+        self.cp0_reg_file[self.cp0_name['cause']] &= 0xffffff83
+        self.cp0_reg_file[self.cp0_name['cause']] |= (code << 2)
+        
 
     def peek(self):
         print('Instruction', self.instruction)
         print('PC', self.pc)
         print('Flags', self.zero, self.carry, self.overflow)
         print('Regs', self.reg_file)
+
+    def set_int_level(self, flag):
+        if flag:
+            self.cp0_reg_file[self.cp0['status']] |= 0b01
+        else:
+            self.cp0_reg_file[self.cp0['status']] &= 0xfffffffd
 
     def step(self):
         """run one instruction at one time"""
@@ -90,7 +124,18 @@ class Cpu(object):
         addr = (inst) & 0x03ffffff
 
         signed_ext_16_to_32 = lambda x: {0: x, 1: -(2**16 - x)}[(x >> 15) & 1]
-        if opcode == 0b000000:
+        if self.is_int_enable() and not self.is_int_level(): # allow int
+            if self.keyboard_int: # key int
+                self.set_excode(0)
+                self.epc = pc;
+                pc = self.int_all_address
+                self.set_int_level(True)
+            elif opcode == 0 and func == 0xc: # syscall
+                self.set_excode(8)
+                self.epc = pc + 4 # can add 4 in the interrupt service
+                pc = self.int_all_address
+                self.set_int_level(True)
+        elif opcode == 0b000000:
             # r - type
             alu_op = aop.convert_func(func)
             if alu_op:
@@ -103,8 +148,10 @@ class Cpu(object):
                 self.reg_file[rd], self.zero, self.carry, self.overflow = \
                     alu_calc(alu_op, op1, op2)
                 pc = pc + 4
-            elif func == 0b001000:
+            elif func == 0b001000:  # jump
                 pc = self.reg_file[rs]
+            # elif func = 0xc: # syscall
+
         else:
             alu_op = aop.convert_opcode(opcode)
             if alu_op:
@@ -142,6 +189,18 @@ class Cpu(object):
             elif opcode == 0b000011:
                 pc = ((pc + 4) & 0xf0000000) | ((addr << 2) & 0x0fffffff)
                 self.reg_file[31] = pc + 4
+            elif opcode == 0x10: # mfc0/mtc0/eret
+                if rs == 0: # mfc0
+                    self.reg_file[rt] = self.cp0_reg_file[rd]
+                    pc = pc + 4
+                elif rs == 4: # mtc0
+                    self.cp0_reg_file[rd] = self.reg_file[rt]
+                    pc = pc + 4
+                elif func == 0x18: # eret
+                    self.set_int_level(False) # exiting interrupt
+                    pc = self.epc
+
+
         self.pc = pc
         self.reg_file[0] = 0
 
@@ -181,6 +240,9 @@ class VirtualMachine(object):
         self.bus = Bus(self.ram)
         self.cpu = Cpu(self.bus)
 
+    def interrupt(self, code):
+        self.cpu.interrupt(code)
+
     def run(self):
         self.cpu.run()
 
@@ -189,6 +251,19 @@ class VirtualMachine(object):
 
     def reset(self):
         pass
+
+def listenEvent(*args, **kwargs):
+    vm = args[0]
+    pygame.init()
+    pygame.display.set_caption("PySPIM")
+    screen = pygame.display.set_mode((640, 480))
+    while True:
+        for event in pygame.event.get():
+            if event.type == KEYDOWN and event.key == K_SPACE:
+                vm.ram.peek()            
+            if event.type == QUIT:
+                exit()
+            print(event)
 
 def main():
     if (len(sys.argv) == 2):
@@ -203,6 +278,8 @@ def main():
         exit()
 
     vm = VirtualMachine([int(x, 2) for x in machineCode.split('\n')])
+    t = threading.Thread(target = listenEvent, args = (vm, ))
+    t.start()
     while True:
         input_str = input('Run command: ')
         if input_str == 's' or input_str == 'step':
