@@ -12,13 +12,14 @@ def encode_pesudo_la(origin_instruction,var_list):
 	rs=la_match.group('rs')
 	real_list=[]
 	try:
-		address=var_list[variable]
-		# print(address)
-		address_code=get_code(address,32)
-		high_code=address_code[:16]
-		low_code=address_code[16:]
-		real_list+=['lui '+rs+','+'0b'+high_code]
-		real_list+=['ori '+rs+','+rs+','+'0b'+low_code]
+		# address=var_list[variable]
+		# # print(address)
+		# address_code=get_code(address,32)
+		# high_code=address_code[:16]
+		# low_code=address_code[16:]
+
+		real_list+=['lahi '+rs+','+variable+'[high]']
+		real_list+=['lalo '+rs+','+rs+','+variable+'[low]']
 	except:
 		raise ValueError('no variable:'+variable)
 	return real_list

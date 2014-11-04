@@ -9,12 +9,14 @@ class UserInstruction:
 			self.note=None
 			self.content=None
 			self.code=None
+			self.type=None
 		else:
 			self.code=None
 			self.label=None
 			self.note=None
 			self.content=None
 			self.code=None
+			self.type=None
 			print("instruction init")
 			self.add_instruction(origin_instruction)
 	def add_instruction(self,origin_instruction):
@@ -87,7 +89,9 @@ def pesudo_encode(input_instruction,var_list):
 	for real in real_list:
 		temp=UserInstruction()
 		temp.content=real
+		temp.type='text'
 		real_instrution+=[temp]
 	real_instrution[0].label=input_instruction.label
 	real_instrution[0].note=input_instruction.note
+	real_instrution[0].type='text'
 	return real_instrution

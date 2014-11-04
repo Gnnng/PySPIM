@@ -33,6 +33,7 @@ class Tinstruction:
 		self.regular=re.compile(regular)
 		self.default_list=default_list
 	def mips_code(self,mips_asm,index,label_list):
+		print ("begin coding each")
 		code=''
 		match_result=self.regular.match(mips_asm)
 		if  (not match_result):
@@ -77,8 +78,9 @@ class Tinstruction:
 			except SyntaxError:
 				raise ValueError('Error expression:'+ immediate)
 			except IndexError:
+				try:
 					label=match_result.group('label')
-					# print (label)
+					print ('label:',label)
 					try:
 						label_location=label_list[label]
 						offset=label_location-index-1
@@ -89,6 +91,18 @@ class Tinstruction:
 						code=code+offset_code
 					except IndexError:
 						raise ValueError('No label:'+label)
+				except IndexError:
+					variable=match_result.group('variable')
+					print ('label:',variable)
+					try:
+						label_location=label_list[variable]
+						# offset_code=bin(offset)[2:]
+						# print(offset_code)
+						# offset_code='0000000000000000'+offset_code
+						offset_code=get_code(label_location,16)
+						code=code+offset_code
+					except IndexError:
+						raise ValueError('No label:'+variable)
 			return code
 		if (self.type=='J'):
 			code=code+self.func
@@ -118,9 +132,11 @@ instruction_template['mult']=Tinstruction('mult','R','(?P<rs>.*?), *(?P<rt>.*)',
 instruction_template['multu']=Tinstruction('multu','R','(?P<rs>.*?), *(?P<rt>.*)','011001')
 instruction_template['or']=Tinstruction('or','R','(?P<rd>.*?), *(?P<rs>.*?), *(?P<rt>.*)','100101')
 instruction_template['ori']=Tinstruction('ori','I','(?P<rt>.*?), *(?P<rs>.*?), *(?P<immediate>.*)','001101')
+instruction_template['lalo']=Tinstruction('lalo','I','(?P<rt>.*?), *(?P<rs>.*?), *(?P<variable>.*)','001101')
 instruction_template['xor']=Tinstruction('xor','R','(?P<rd>.*?), *(?P<rs>.*?), *(?P<rt>.*)','100110')
 instruction_template['xori']=Tinstruction('xori','I','(?P<rt>.*?), *(?P<rs>.*?), *(?P<immediate>.*)','001110')
 instruction_template['lui']=Tinstruction('lui','I','(?P<rt>.*?), *(?P<immediate>.*)','001111')
+instruction_template['lahi']=Tinstruction('lahi','I','(?P<rt>.*?), *(?P<variable>.*)','001111')
 instruction_template['nor']=Tinstruction('nor','R','(?P<rd>.*?), *(?P<rs>.*?), *(?P<rt>.*)','100111')
 instruction_template['slt']=Tinstruction('slt','R','(?P<rd>.*?), *(?P<rs>.*?), *(?P<rt>.*)','101010')
 instruction_template['sltu']=Tinstruction('sltu','R','(?P<rd>.*?), *(?P<rs>.*?), *(?P<rt>.*)','101011')
