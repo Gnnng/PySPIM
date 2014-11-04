@@ -21,7 +21,7 @@ MAIN:
 	la	$a0, hello
 	addi	$v0, $zero, 4
 	j	SYSCALL
-.end
+	j	END
 #####syscall
 #syscall
 SYSCALL:
@@ -52,7 +52,7 @@ DisplayChar:
 	sll	$s0, $t1, 8
 	# CRTadr+$s0 is the address where we fill in $a0
 	or	$s0, $s0, $t0
-	li	$t2, CRTadr
+	la	$t2, CRTadr
 	add	$s0, $s0, $t2
 	sw	$a0, 0($s0)
 	# bring back data
@@ -144,3 +144,6 @@ PrintString_End_LOOP:
 	lw	$t1, 12($sp)
 	addi	$sp, $sp, 16
 	jr	$ra
+	
+#============END===========#
+END:
