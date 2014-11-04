@@ -1,0 +1,11 @@
+syscall
+1	print_int
+2	print_float
+3	print_double
+4	print_string
+5	read_int
+6	read_float
+7	read_double
+8	read_string
+11	print_char
+12	read_char

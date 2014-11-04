@@ -1,0 +1,276 @@
+#!/usr/bin/python3
+# -*- coding: UTF-8 -*-
+import sys
+import control_fsm as fsm
+import alu_operation as aop
+
+RESET = 0
+
+class Control(object):
+        def __init__(self, bus):
+            self.signals = {
+                'PCWriteCond': '0',
+                'PCWrite': '0',
+                'IorD': '0',
+                'MemRead': '0',
+                'MemWrite': '0',
+                'MemtoReg': '00',
+                'IRWrite': '0',
+                'RegDst': '00',
+                'RegWrite': '0',
+                'PCsource': '00',
+                'ALUsrcA': '0',
+                'ALUsrcB': '00',
+                'ALUop': '0000',
+                'Beq': '0',
+                'Sign': '0'
+            }
+            self.state = fsm.START
+            self.bus = bus
+
+        def _signal_convert(self, raw_signals):
+            signals = self.signals
+            signals['PCWriteCond'] = raw_signals[0: 1]
+            signals['PCWrite'] = raw_signals[1: 2]
+            signals['IorD'] = raw_signals[2: 3]
+            signals['MemRead'] = raw_signals[3: 4]
+            signals['MemWrite'] = raw_signals[4: 5]
+            signals['MemtoReg'] = raw_signals[5: 7]
+            signals['IRWrite'] = raw_signals[7: 8]
+            signals['RegDst'] = raw_signals[8: 10]
+            signals['RegWrite'] = raw_signals[10: 11]
+            signals['PCsource'] = raw_signals[11: 13]
+            signals['ALUsrcA'] = raw_signals[13: 14]
+            signals['ALUsrcB'] = raw_signals[14: 16]
+            signals['ALUop'] = raw_signals[16: 20]
+            signals['Beq'] = raw_signals[20: 21]
+            signals['Sign'] = raw_signals[21: 22]
+            return signals
+
+        def next_state(self):
+            # print('before change', self.state)
+            inst = 0
+            if self.state in (fsm.START, fsm.ALUREG):
+                self.state = fsm.IF
+                self.signals = self._signal_convert(fsm.SIGNALS[self.state])
+            elif self.state == fsm.IF:
+                self.state = fsm.ID
+                self.signals = self._signal_convert(fsm.SIGNALS[self.state])
+            elif self.state == fsm.ID:
+                self.state = fsm.RTYPE
+                self.signals = self._signal_convert(fsm.SIGNALS[self.state])
+            elif self.state == fsm.RTYPE:
+                self.state = fsm.ALUREG
+                self.signals = self._signal_convert(fsm.SIGNALS[self.state])
+            # print('after change', self.state)
+
+# test _signal_convert
+# c = Control(1)
+# print(c.signals)
+# c._signal_convert('0101000100000001000000')
+# print(c.signals)
+
+def alu_calc(operation, op1, op2):
+    result, overflow, carry = 0, False, False
+    signed_32 = lambda x: {0: x, 1: -(2**32 - x)}[(x >> 31) & 1]
+    if operation == aop.AND:
+        result = (op1 & op2) & 0xffffffff
+    if operation == aop.OR:
+        result = (op1 | op2) & 0xffffffff
+    if operation == aop.ADD:
+        sop1 = signed_32(op1)
+        sop2 = signed_32(op2)
+        result = sop1 + sop2
+        overflow = (sop1 > 0 and sop2 > 0 and result > 0x7fffffff) or \
+            (sop1 < 0 and sop2 < 0 and result < -2 * 2**31)
+        result = signed_32(result & 0xffffffff)
+    if operation == aop.SUB:
+        sop1 = signed_32(op1)
+        sop2 = signed_32(op2)
+        result = sop1 - sop2
+        overflow = (sop1 > 0 and sop2 < 0 and result > 0x7fffffff) or \
+            (sop1 < 0 and sop2 > 0 and result < -2 * 2**31)
+        result = signed_32(result & 0xffffffff)
+    if operation == aop.SLT:
+        if signed_32(op1) < signed_32(op2):
+            result = 1
+        else:
+            result = 0
+    if operation == aop.XOR:
+        result = (op1 ^ op2) & 0xffffffff
+    if operation == aop.SLL:
+        result = (op1 << op2) & 0xffffffff
+    if operation == aop.SRL:
+        result = (op1 >> op2) & 0xffffffff
+    if operation == aop.SRA:
+        result = (op1 >> op2) & 0xffffffff
+    if operation == aop.NOR:
+        result = (~(op1 | op2)) & 0xffffffff
+    if operation == aop.ADDU:
+        result = op1 + op2
+        carry = result > 2**32
+    if operation == aop.SUBU:
+        result = op1 - op2
+        carry = result < 0
+    if operation == aop.SLTU:
+        if op1 < op2:
+            result = 1
+        else:
+            result = 0
+    return (result, result == 0, carry, overflow)
+
+class Cpu(object):
+    
+    def __init__(self, bus):
+        self.pc = 0
+        self.reg_file = [0] * 32
+        self.bus = bus
+        self.instruction = 0
+        self.zero = False
+        self.carry = False
+        self.overflow = False
+
+    def peek(self):
+        print('Instruction', self.instruction)
+        print('PC', self.pc)
+        print('Flags', self.zero, self.carry, self.overflow)
+        print('Regs', self.reg_file)
+
+    def step(self):
+        """run one instruction at one time"""
+        pc = self.pc
+        inst = self.bus.read(pc)
+        self.instruction = inst
+        opcode = (inst >> 26) & 0x3f
+        rs = (inst >> 21) & 0x1f
+        rt = (inst >> 16) & 0x1f
+        rd = (inst >> 11) & 0x1f
+        shamt = (inst >> 6) & 0x1f
+        func = (inst) & 0x3f
+        imme = (inst) & 0xffff 
+        addr = (inst) & 0x03ffffff
+
+        signed_ext_16_to_32 = lambda x: {0: x, 1: -(2**16 - x)}[(x >> 15) & 1]
+        if opcode == 0b000000:
+            # r - type
+            alu_op = aop.convert_func(func)
+            if alu_op:
+                if alu_op in (aop.SLL, aop.SRA, aop.SRL):
+                    op1 = self.reg_file[rt]
+                    op2 = shamt
+                else:
+                    op1 = self.reg_file[rs]
+                    op2 = self.reg_file[rt]
+                self.reg_file[rd], self.zero, self.carry, self.overflow = \
+                    alu_calc(alu_op, op1, op2)
+                pc = pc + 4
+            elif func == 0b001000:
+                pc = self.reg_file[rs]
+        else:
+            alu_op = aop.convert_opcode(opcode)
+            if alu_op:
+                op1 = self.reg_file[rs]
+                if alu_op in (aop.ADD, aop.SLT):
+                    op2 = signed_ext_16_to_32(imme)
+                else:
+                    op2 = imme
+                self.reg_file[rt], self.zero, self.carry, self.overflow = \
+                    alu_calc(alu_op, op1, op2)
+                pc = pc + 4
+            elif opcode == 0b100011: # lw
+                address = self.reg_file[rs] + signed_ext_16_to_32(imme)
+                self.reg_file[rt] = self.bus.read(address)
+                pc = pc + 4
+            elif opcode == 0b101011: # sw
+                address = self.reg_file[rs] + signed_ext_16_to_32(imme)
+                self.bus.write(address, self.reg_file[rt])
+                pc = pc + 4
+            elif opcode == 0b000100:
+                if self.reg_file[rs] == self.reg_file[rt]:
+                    pc = pc + 4 + (signed_ext_16_to_32(imme) << 2)
+                else:
+                    pc = pc + 4
+            elif opcode == 0b000101:
+                if self.reg_file[rs] != self.reg_file[rt]:
+                    pc = pc + 4 + (signed_ext_16_to_32(imme) << 2)
+                else:
+                    pc = pc + 4
+            elif opcode == 0b001111:
+                self.reg_file[rt] = imme << 16
+                pc = pc + 4
+            elif opcode == 0b000010:
+                pc = ((pc + 4) & 0xf0000000) | ((addr << 2) & 0x0fffffff)
+            elif opcode == 0b000011:
+                pc = ((pc + 4) & 0xf0000000) | ((addr << 2) & 0x0fffffff)
+                self.reg_file[31] = pc + 4
+        self.pc = pc
+        self.reg_file[0] = 0
+
+class Bus(object):
+    def __init__(self, ram):
+        self.ram = ram
+
+    def read(self, logic_address):
+        return self.ram.read(logic_address)
+
+    def write(self, logic_address, data):
+        self.ram.write(logic_address, data)
+
+class Ram(object):
+    def __init__(self, init_data):
+        self.memory = [0] * 0x00010000
+        for x in range(0, len(init_data)):
+            self.memory[x] = init_data[x]
+
+    def read(self, address):
+        return self.memory[address >> 2]
+
+    def write(self, address, data):
+        self.memory[address >> 2] = data
+
+    def peek(self, start = 0, len = 10):
+        print("Ram ", self.memory[start << 2: (start + len) << 2])
+
+class VideoRam(object):
+    def __init__(self):
+        pass
+
+class VirtualMachine(object):
+    byteWidth = 16
+    def __init__(self, ram):
+        self.ram = Ram(ram)
+        self.bus = Bus(self.ram)
+        self.cpu = Cpu(self.bus)
+
+    def run(self):
+        self.cpu.run()
+
+    def step(self):
+        self.cpu.step()
+
+    def reset(self):
+        pass
+
+def main():
+    if (len(sys.argv) == 2):
+        with open(sys.argv[1]) as code_file:
+            machineCode = code_file.read()
+    else:
+        machineCode = input(
+            'Please input machine code, one instruction per line\n')
+
+    if len(machineCode) == 0:
+        print('No content of code')
+        exit()
+
+    vm = VirtualMachine([int(x, 2) for x in machineCode.split('\n')])
+    while True:
+        input_str = input('Run command: ')
+        if input_str == 's':
+            vm.step()
+        elif input_str == 'p':
+            vm.cpu.peek()
+            vm.ram.peek()
+
+if __name__ == '__main__':
+    main()
