@@ -6,7 +6,7 @@
 
 #===========Data============#
 .data
-CRTadr .4byte 0
+CRTadr .4byte
 #CRTstart .4byte
 WIDTH .4byte 80
 HEIGHT .4byte 25
@@ -17,7 +17,27 @@ SCRmod .4byte 0 #Text(0)/vga(1) mode
 hello .asciiz "Hello world!"
 #===========Text============#
 .text
+MAIN:
+	la	$a0, hello
+	addi	$v0, $zero, 4
+	j	SYSCALL
+.end
 #####syscall
+#syscall
+SYSCALL:
+	# push ra, a0, t0
+	addi	$sp, $sp, -12
+	sw	$ra, 0($sp)
+	sw	$a0, 4($sp)
+	sw	$t0, 8($sp)
+	# init t0
+	add	$t0, $zero, $zero
+	addi	$t0, $t0, 4
+CheckPrintString:
+	bne	$v0, $t0, Syscall_END
+	j	PrintString
+Syscall_END
+	jr	$ra
 #syscall - DisplayChar
 DisplayChar:
 	# push $a0, $s0, $t0, $t1, $t2
@@ -98,4 +118,29 @@ PrintChar_End:
 	lw	$t0, 20($sp)
 	addi	$sp, $sp, 24
 	jr	$ra
-	
+#syscall - PrintString
+PrintString:
+	#push $ra, $a0, $t0, $t1
+	addi	$sp, $sp, -16
+	sw	$ra, 0($sp)
+	sw	$a0, 4($sp)
+	sw	$t0, 8($sp)
+	sw	$t1, 12($sp)
+	#t0 = a0
+	add	$t0, $a0, $zero
+PrintString_LOOP:
+	lw	$t1, 0($t0)
+	beq	$t1, $zero, PrintString_End_LOOP
+	#a0 = t1
+	add	$a0, $t1, $zero
+	PrintChar
+	addi	$t0, $t0, 4
+	j	PrintString_LOOP
+PrintString_End_LOOP:
+	#pop
+	lw	$ra, 0($sp)
+	lw	$a0, 4($sp)
+	lw	$t0, 8($sp)
+	lw	$t1, 12($sp)
+	addi	$sp, $sp, 16
+	jr	$ra
