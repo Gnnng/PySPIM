@@ -38,8 +38,15 @@ class Tinstruction:
 		match_result=self.regular.match(mips_asm)
 		if  (not match_result):
 			raise ValueError('Instruction syntax error')
-		if (self.type=='R'):
-			code=code+'000000'
+		if (self.type=='S'):
+			code+=self.func
+			return code
+		if (self.type=='R' or self.type=='R1'):
+			if (self.type=='R'):
+				code=code+'000000'
+			else:
+				code=code+self.func
+				self.func='000000'
 			reg_tofill=['rs','rt','rd','shamt']
 			for each_reg in reg_tofill:
 				try:
@@ -192,6 +199,13 @@ instruction_template['mthi']=Tinstruction('mthi','R','(?P<rs>.*)','010001')
 instruction_template['mtlo']=Tinstruction('mtlo','R','(?P<rs>.*)','010011')
 instruction_template['movn']=Tinstruction('movn','R','(?P<rd>.*?), *(?P<rs>.*?), *(?P<rt>.*)','001011')
 instruction_template['movz']=Tinstruction('movz','R','(?P<rd>.*?), *(?P<rs>.*?), *(?P<rt>.*)','001010')
+instruction_template['syscall']=Tinstruction('syscall','S','','00000000000000000000000000001100')
+instruction_template['eret']=Tinstruction('eret','S','','00000000000000000000000000011000')
+instruction_template['break']=Tinstruction('break','S','','00000000000000000000000000001101')
+instruction_template['nop']=Tinstruction('nop','S','','00000000000000000000000000000000')
+instruction_template['mfc0']=Tinstruction('mfc0','R1','(?P<rt>.*?), *(?P<rd>.*)','010000')
+instruction_template['mtc0']=Tinstruction('mtc0','R1','(?P<rd>.*?), *(?P<rt>.*)','010000',{'rs':'00100'})
+
 
 
 
