@@ -73,6 +73,12 @@ INT08_PRINT_CHAR:
 	
 	#return
 	jr	$ra
+.data
+	CRTadr	.word
+	WEIGHT	.word
+	HEIGHT	.word
+	CursorX	.word
+	CursorY	.word
 .text(0x0000_1000)
 #操作系统开始运行
 KERNEL_INIT:
