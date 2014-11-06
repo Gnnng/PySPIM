@@ -80,17 +80,16 @@ class Cpu(object):
         }
         self.int_all_address = 4
         self.int_vector_table = 0x100
-        self.cp0_reg_file[12] |= 1 # enable int
+        self.set_int_enable()
 
     def is_int_enable(self):
-        if (self.cp0_reg_file[cp0_name['status']] & 1) != 0:
-            return True
-        return False
+        return (self.cp0_reg_file[self.cp0_name['status']] & 1) != 0
+
+    def set_int_enable(self):
+        self.cp0_reg_file[self.cp0_name['status']] |= 1
 
     def is_int_level(self):
-        if (self.cp0_reg_file[cp0_name['status']] & 0b10) != 0:
-            return True
-        return False
+        return (self.cp0_reg_file[self.cp0_name['status']] & 0b10) != 0
 
     def set_excode(self, code):
         self.cp0_reg_file[self.cp0_name['cause']] &= 0xffffff83
@@ -105,9 +104,9 @@ class Cpu(object):
 
     def set_int_level(self, flag):
         if flag:
-            self.cp0_reg_file[self.cp0['status']] |= 0b01
+            self.cp0_reg_file[self.cp0_name['status']] |= 0b01
         else:
-            self.cp0_reg_file[self.cp0['status']] &= 0xfffffffd
+            self.cp0_reg_file[self.cp0_name['status']] &= 0xfffffffd
 
     def step(self):
         """run one instruction at one time"""
@@ -125,16 +124,23 @@ class Cpu(object):
 
         signed_ext_16_to_32 = lambda x: {0: x, 1: -(2**16 - x)}[(x >> 15) & 1]
         if self.is_int_enable() and not self.is_int_level(): # allow int
+            self.int_hit = False
             if self.keyboard_int: # key int
                 self.set_excode(0)
                 self.epc = pc;
                 pc = self.int_all_address
                 self.set_int_level(True)
+                self.int_hit = True
             elif opcode == 0 and func == 0xc: # syscall
                 self.set_excode(8)
                 self.epc = pc + 4 # can add 4 in the interrupt service
                 pc = self.int_all_address
                 self.set_int_level(True)
+                self.int_hit = True
+
+        if self.int_hit:
+            self.reg_file[0] = 0
+            sel.pc = pc
         elif opcode == 0b000000:
             # r - type
             alu_op = aop.convert_func(func)
@@ -252,18 +258,28 @@ class VirtualMachine(object):
     def reset(self):
         pass
 
-def listenEvent(*args, **kwargs):
-    vm = args[0]
-    pygame.init()
-    pygame.display.set_caption("PySPIM")
-    screen = pygame.display.set_mode((640, 480))
-    while True:
-        for event in pygame.event.get():
-            if event.type == KEYDOWN and event.key == K_SPACE:
-                vm.ram.peek()            
-            if event.type == QUIT:
-                exit()
-            print(event)
+class ExternalDevice(threading.Thread):
+    def __init__(self, vm):
+        super(ExternalDevice, self).__init__()
+        self.vm = vm
+        self.running = True
+
+    def run(self):
+        pygame.init()
+        pygame.display.set_caption("PySPIM")
+        pygame.display.iconify()
+        screen = pygame.display.set_mode((640, 480))
+        while True:
+            if not self.running:
+                return
+            for event in pygame.event.get():
+                if event.type == KEYDOWN and event.key == K_SPACE:
+                    self.vm.ram.peek()            
+                if event.type == QUIT:
+                    self.stop()
+
+    def stop(self):
+        self.running = False
 
 def main():
     if (len(sys.argv) == 2):
@@ -278,17 +294,19 @@ def main():
         exit()
 
     vm = VirtualMachine([int(x, 2) for x in machineCode.split('\n')])
-    t = threading.Thread(target = listenEvent, args = (vm, ))
+    t = ExternalDevice(vm)
     t.start()
     while True:
         input_str = input('Run command: ')
-        if input_str == 's' or input_str == 'step':
+        if input_str == 's' or input_str == 'step' or input_str == '':
             vm.step()
+            vm.cpu.peek()
         elif input_str == 'p' or input_str == 'peek':
             vm.cpu.peek()
             vm.ram.peek()
         elif input_str == 'e' or input_str == 'exit':
             print("Exiting...")
+            t.stop()
             exit()
 
 if __name__ == '__main__':
