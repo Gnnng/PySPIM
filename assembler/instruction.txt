@@ -1,6 +1,6 @@
 .text
 mfc0 $t0,$t1
-mtc0 $t1,$t2
+mtc0 $t1,$13
 break
 nop
 syscall

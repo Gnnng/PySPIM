@@ -20,7 +20,10 @@ class Treg:
 		else:
 			self.regname=sig
 			try:
-				self.num=reglist.index(sig[1:])
+				if (sig[1].isalpha()):
+					self.num=reglist.index(sig[1:])
+				else:
+					self.num=eval(sig[1:])
 			except:
 				raise ValueError('No Such reg called:'+sig)
 			self.binnum=bin(self.num)[2:]
