@@ -99,7 +99,7 @@ class Cpu(object):
     def peek(self):
         print('Instruction', self.instruction)
         print('PC', self.pc)
-        print('Flags', self.zero, self.carry, self.overflow)
+        # print('Flags', self.zero, self.carry, self.overflow)
         print('Regs', self.reg_file)
 
     def set_int_level(self, flag):
@@ -107,6 +107,9 @@ class Cpu(object):
             self.cp0_reg_file[self.cp0_name['status']] |= 0b01
         else:
             self.cp0_reg_file[self.cp0_name['status']] &= 0xfffffffd
+    def run(self):
+        while True:
+            self.step()
 
     def step(self):
         """run one instruction at one time"""
@@ -121,12 +124,13 @@ class Cpu(object):
         func = (inst) & 0x3f
         imme = (inst) & 0xffff 
         addr = (inst) & 0x03ffffff
-
         signed_ext_16_to_32 = lambda x: {0: x, 1: -(2**16 - x)}[(x >> 15) & 1]
         if self.is_int_enable() and not self.is_int_level(): # allow int
             self.int_hit = False
             if self.keyboard_int: # key int
-                self.set_excode(0)
+                print("keyboard intttttttttttttttttttttttttttttttt")
+                self.peek()
+                self.set_excode(0)      
                 self.epc = pc;
                 pc = self.int_all_address
                 self.set_int_level(True)
@@ -140,7 +144,7 @@ class Cpu(object):
 
         if self.int_hit:
             self.reg_file[0] = 0
-            sel.pc = pc
+            self.pc = pc
         elif opcode == 0b000000:
             # r - type
             alu_op = aop.convert_func(func)
@@ -202,7 +206,7 @@ class Cpu(object):
                 elif rs == 4: # mtc0
                     self.cp0_reg_file[rd] = self.reg_file[rt]
                     pc = pc + 4
-                elif func == 0x18: # eret
+                elif rs == 16 and func == 0x18: # eret
                     self.set_int_level(False) # exiting interrupt
                     pc = self.epc
 
@@ -255,6 +259,10 @@ class VirtualMachine(object):
     def step(self):
         self.cpu.step()
 
+    def peek(self):
+        self.cpu.peek()
+        self.ram.peek()
+
     def reset(self):
         pass
 
@@ -267,16 +275,37 @@ class ExternalDevice(threading.Thread):
     def run(self):
         pygame.init()
         pygame.display.set_caption("PySPIM")
-        pygame.display.iconify()
+        # pygame.display.iconify()
+        pygame.event.set_allowed(None)
+        pygame.event.set_allowed([KEYDOWN, QUIT])
         screen = pygame.display.set_mode((640, 480))
+        self.keyboard_int = [];
+        self.keyboard_count = 0;
         while True:
             if not self.running:
-                return
-            for event in pygame.event.get():
-                if event.type == KEYDOWN and event.key == K_SPACE:
-                    self.vm.ram.peek()            
+                break 
+            self.keyboard_int.extend(pygame.event.get(KEYDOWN))
+            # if len(self.keyboard_int) > 0:
+            #     self.vm.peek()
+            #     self.vm.cpu.keyboard_int = True
+            #     self.keyboard_int.pop(0)
+            # else:
+            #     self.vm.cpu.keyboard_int = False
+            if self.keyboard_count > 0:
+                self.keyboard_count -= 1
+            elif len(self.keyboard_int) > 0:
+                # print('hit key')
+                self.vm.cpu.keyboard_int = True
+                self.keyboard_count = 5000
+                # self.vm.peek()
+                self.keyboard_int.pop(0)
+            else:
+                self.vm.cpu.keyboard_int = False
+
+            for event in pygame.event.get(QUIT):
                 if event.type == QUIT:
                     self.stop()
+                # print(event)
 
     def stop(self):
         self.running = False
@@ -300,7 +329,12 @@ def main():
         input_str = input('Run command: ')
         if input_str == 's' or input_str == 'step' or input_str == '':
             vm.step()
-            vm.cpu.peek()
+            vm.peek()
+        elif input_str == 'r' or input_str == 'run':
+            vm.run()
+        elif input_str == 't' or input_str == 'test':
+            for i in range(100000):
+                vm.step()
         elif input_str == 'p' or input_str == 'peek':
             vm.cpu.peek()
             vm.ram.peek()
