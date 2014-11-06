@@ -142,13 +142,14 @@ def encode(input_list):
 		if (instruction.type=='text'):
 			print ("======now ins======"+ instruction.content)
 			instruction.code=single_encode(instruction.content,label_list,index)
-	result_file=file('code.txt','w')
-
+	# result_file=file('code.txt','w')
+	result_file=open('code.txt','w')
 	for instruction in word_instruction_list:
 		# pass
 		# if (instruction.type=='text'):
 		print (instruction.content)
-		result_file.write(instruction.code+'\n')
+		# result_file.write(instruction.code+'\n')
+		print (instruction.code,file=result_file)
 			# print (instruction.code)
 		a=instruction.code;
 		a='0b'+a;

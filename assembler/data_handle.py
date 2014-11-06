@@ -23,21 +23,21 @@ def initdata(instruction):
 		for i in temp:
 			new_data+=[get_code(i,8)]
 	if  (data_type=='.double'):
-		exec('temps=['+data_content+']')
+		temps=eval('['+data_content+']')
 		for temp in temps:
 			packed=struct.pack('>d',temp)
 			bytes=struct.unpack('bbbbbbbb',packed)
 			for byte in bytes:
 				new_data+=[get_code(byte,8)]
 	if (data_type=='.float'):
-		exec('temps=['+data_content+']')
+		temps=eval('['+data_content+']')
 		for temp in temps:
 			packed=struct.pack('>f',temp)
 			bytes=struct.unpack('bbbb',packed)
 			for byte in bytes:
 				new_data+=[get_code(byte,8)]
 	if (data_type=='.half'):
-		exec('temps=['+data_content+']')
+		temps=eval('['+data_content+']')
 		for temp in temps:
 			packed=struct.pack('>h',temp)
 			bytes=struct.unpack('bb',packed)
@@ -45,7 +45,9 @@ def initdata(instruction):
 				new_data+=[get_code(byte,8)]
 	if (data_type=='.word'):
 		print("data="+data_content)
-		exec('temps=['+data_content+']')
+		# exec('temps=['+data_content+']')
+		temps=eval('['+data_content+']')
+		print ('temps=['+data_content+']')
 		for temp in temps:
 			packed=struct.pack('>i',temp)
 			bytes=struct.unpack('bbbb',packed)
