@@ -81,6 +81,7 @@ def encode(input_list):
 	label_list={}
 	print("===real instruction start===")
 	index=0
+	word_instruction_list=[]
 	for instruction in real_instruction_list:
 		print("=====now instruction=====",instruction.content,"|label:",instruction.label)
 		if (instruction.type=='data'):
@@ -93,7 +94,7 @@ def encode(input_list):
 						raise ValueError('redefine label:'+each_label)
 					except:
 						
-						address=max_address+index*4
+						address=index*4
 						address_code=get_code(address,32)
 						high_code=address_code[:16]
 						low_code=address_code[16:]
@@ -103,10 +104,26 @@ def encode(input_list):
 						if each_label=="gill_hint":
 							print("!@#$%",max_address,index)
 							print("gill_hint[low]="+hex(label_list['gill_hint[low]']))
+			print ('======data======')
 			newdatas=initdata(instruction.content)
-			data_set+=newdatas
-			max_address+=len(newdatas)
+			word_cut=4
+			while (word_cut<len(newdatas)):
+				temp=UserInstruction()
+				temp.code=''.join(newdatas[word_cut-4:word_cut])
+				temp.type='data'
+				word_instruction_list+=[temp]
+				index+=1
+				word_cut+=4
+			temp=UserInstruction()
+			print (newdatas[word_cut-4:])
+			temp.code=''.join(newdatas[word_cut-4:])+((word_cut-len(newdatas))*8)*'0'
+			temp.type='data'
+			word_instruction_list+=[temp]
+			index+=1
+			# data_set+=newdatas
+			# max_address+=len(newdatas)			
 		else:
+			word_instruction_list+=[instruction]
 			if (instruction.label):
 				print ("handling labellist",instruction.label)
 				for each_label in instruction.label:
@@ -114,26 +131,31 @@ def encode(input_list):
 						test=label_list[each_label]
 						raise ValueError('redefine label:'+instruction.label)
 					except:
-						label_list[each_label]=index+max_address
+						label_list[each_label]=index
 			index+=1
 	print ("======label list======")
 	for each_label in label_list:
 		print (each_label)
 	# print (label_list["clear"])
 	print ("======begin encode======")
-	for index,instruction in enumerate(real_instruction_list):
-		print ("======now ins======"+ instruction.content)
+	for index,instruction in enumerate(word_instruction_list):
 		if (instruction.type=='text'):
+			print ("======now ins======"+ instruction.content)
 			instruction.code=single_encode(instruction.content,label_list,index)
-	for instruction in real_instruction_list:
+	result_file=file('code.txt','w')
+
+	for instruction in word_instruction_list:
 		# pass
-		if (instruction.type=='text'):
-			# print (instruction.content)
+		# if (instruction.type=='text'):
+		print (instruction.content)
+		result_file.write(instruction.code+'\n')
 			# print (instruction.code)
-			a=instruction.code;
-			a='0b'+a;
-			print(hex(int(a,2)));
-	print data_set
+		a=instruction.code;
+		a='0b'+a;
+		print(hex(int(a,2)));
+	# print data_set
+
+changeline=0
 print("========program start=======")
 ins_file=open('instruction.txt')
 input_list=[]

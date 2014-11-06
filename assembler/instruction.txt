@@ -1,4 +1,9 @@
 .text
+mfc0 $t0,$t1
+mtc0 $t1,$t2
+break
+nop
+syscall
 #################### shell area
 gill:
 		addi 	$sp, $zero, 0x5ffc

@@ -12,11 +12,11 @@ def initdata(instruction):
 		exec('temp='+data_content)
 		# print (temp)
 		for char in temp:
-			new_data+=[bin(ord(char))[2:]]
+			new_data+=[get_code(ord(char),8)]
 	if (data_type=='.asciiz'):
 		exec('temp='+data_content)
 		for char in temp:
-			new_data+=[bin(ord(char))[2:]]
+			new_data+=[get_code(ord(char),8)]
 		new_data+=['00000000']
 	if (data_type=='.byte'):
 		exec('temp='+data_content)
