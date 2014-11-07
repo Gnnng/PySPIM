@@ -65,12 +65,30 @@ INT08_SERVICE:
 INT08_PRINT_STRING:
 	#syscall print string
 	#push $ra, $v0, $a0, $t0
-	
+	addi	$sp, $sp, -16
+	sw	$ra, 0($sp)
+	sw	$v0, 4($sp)
+	sw	$a0, 8($sp)
+	sw	$t0, 12($sp)
+	#调用PRINT_CHAR
+	add	$t0, $a0, $zero
+PRINT_STRING_LOOP:
+	lw	$a0, 0($t0) #a0中为ascii，t0中为地址
+	beq	$a0, $zero, PRINT_STRING_END_LOOP
+	jal	INT08_PRINT_CHAR
+	addi	$t0, $t0, 1
+PRINT_STRING_END_LOOP:
+	#pop $ra, $v0, $a0, $t0
+	lw	$ra, 0($sp)
+	lw	$v0, 4($sp)
+	lw	$a0, 8($sp)
+	lw	$t0, 12($sp)
+	addi	$sp, $sp, 16
 	#return
 	jr	$ra
 INT08_PRINT_CHAR:
-	#push $ra, $v0, $a0, $t0
-	
+	#push $ra, $v0, $a0, $a1, $t0
+	#a0
 	#return
 	jr	$ra
 .data
