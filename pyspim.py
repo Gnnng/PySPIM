@@ -79,7 +79,11 @@ class Cpu(object):
         self.int_all_address = 4
         self.int_vector_table = 0x100
         self.set_int_enable()
+        self.alive = False
 
+    def ready_to_int(self):
+        return not self.is_int_level() and self.alive
+        
     def is_int_enable(self):
         return (self.cp0_reg_file[self.cp0_name['status']] & 1) != 0
 
@@ -111,6 +115,7 @@ class Cpu(object):
 
     def step(self):
         """run one instruction at one time"""
+        self.alive = True
         pc = self.pc
         inst = self.bus.read(pc)
         self.instruction = inst
@@ -126,8 +131,8 @@ class Cpu(object):
         if self.is_int_enable() and not self.is_int_level(): # allow int
             self.int_hit = False
             if self.keyboard_int: # key int
-                print("keyboard intttttttttttttttttttttttttttttttt")
-                self.peek()
+                print('Got keyboard int')
+                self.keyboard_int = False
                 self.set_excode(0)      
                 self.epc = pc;
                 pc = self.int_all_address
@@ -211,6 +216,7 @@ class Cpu(object):
 
         self.pc = pc
         self.reg_file[0] = 0
+        self.alive = False
 
 class Bus(object):
     def __init__(self, ram):
@@ -259,8 +265,12 @@ class Ram(object):
 class VideoRam(object):
     def __init__(self):
         self.memory = [0] * 2**19
-        self.memory[0] = int(ord('a')) << 3;
-        self.memory[1] = int(ord('b')) << 3;
+
+        count = 0
+        for x in 'abcedfg':
+            self.memory[count] = int(ord(x)) << 3;
+            count += 1
+
     def read(self, address):
         address &= 0x1fffff
         return self.memory[address >> 2]
