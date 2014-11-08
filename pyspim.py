@@ -3,9 +3,7 @@
 import sys
 import control_fsm as fsm
 import alu_operation as aop
-import pygame
-import threading
-from pygame.locals import *
+import external_device as ed
 
 RESET = 0
 
@@ -217,23 +215,42 @@ class Cpu(object):
 class Bus(object):
     def __init__(self, ram):
         self.ram = ram
+        self.vram = VideoRam()
+        self.external_device = None
+
+    def add_device(self, device):
+        self.external_device = device
+
+    def address_map(self, address):
+        device = None
+        if address < 0x10000000:
+            device = self.ram
+        elif address < 0xffff0000:
+            device = self.vram
+        else:
+            device = self.external_device
+        return device
 
     def read(self, logic_address):
-        return self.ram.read(logic_address)
+        device = self.address_map(logic_address)
+        return device.read(logic_address)
 
     def write(self, logic_address, data):
-        self.ram.write(logic_address, data)
+        device = self.address_map(logic_address)
+        device.write(logic_address, data)
 
 class Ram(object):
     def __init__(self, init_data):
-        self.memory = [0] * 0x00010000
+        self.memory = [0] * 1024
         for x in range(0, len(init_data)):
             self.memory[x] = init_data[x]
 
     def read(self, address):
+        address &= 0xffff
         return self.memory[address >> 2]
 
     def write(self, address, data):
+        address &= 0xffff
         self.memory[address >> 2] = data
 
     def peek(self, start = 0, len = 10):
@@ -241,7 +258,16 @@ class Ram(object):
 
 class VideoRam(object):
     def __init__(self):
-        pass
+        self.memory = [0] * 2**19
+        self.memory[0] = int(ord('a')) << 3;
+        self.memory[1] = int(ord('b')) << 3;
+    def read(self, address):
+        address &= 0x1fffff
+        return self.memory[address >> 2]
+    def write(self, address, data):
+        address &= 0x1fffff
+        self.memory[address >> 2] = data
+
 
 class VirtualMachine(object):
     byteWidth = 16
@@ -266,50 +292,6 @@ class VirtualMachine(object):
     def reset(self):
         pass
 
-class ExternalDevice(threading.Thread):
-    def __init__(self, vm):
-        super(ExternalDevice, self).__init__()
-        self.vm = vm
-        self.running = True
-
-    def run(self):
-        pygame.init()
-        pygame.display.set_caption("PySPIM")
-        # pygame.display.iconify()
-        pygame.event.set_allowed(None)
-        pygame.event.set_allowed([KEYDOWN, QUIT])
-        screen = pygame.display.set_mode((640, 480))
-        self.keyboard_int = [];
-        self.keyboard_count = 0;
-        while True:
-            if not self.running:
-                break 
-            self.keyboard_int.extend(pygame.event.get(KEYDOWN))
-            # if len(self.keyboard_int) > 0:
-            #     self.vm.peek()
-            #     self.vm.cpu.keyboard_int = True
-            #     self.keyboard_int.pop(0)
-            # else:
-            #     self.vm.cpu.keyboard_int = False
-            if self.keyboard_count > 0:
-                self.keyboard_count -= 1
-            elif len(self.keyboard_int) > 0:
-                # print('hit key')
-                self.vm.cpu.keyboard_int = True
-                self.keyboard_count = 5000
-                # self.vm.peek()
-                self.keyboard_int.pop(0)
-            else:
-                self.vm.cpu.keyboard_int = False
-
-            for event in pygame.event.get(QUIT):
-                if event.type == QUIT:
-                    self.stop()
-                # print(event)
-
-    def stop(self):
-        self.running = False
-
 def main():
     if (len(sys.argv) == 2):
         with open(sys.argv[1]) as code_file:
@@ -323,7 +305,8 @@ def main():
         exit()
 
     vm = VirtualMachine([int(x, 2) for x in machineCode.split('\n')])
-    t = ExternalDevice(vm)
+    t = ed.ExternalDevice(vm)
+    vm.bus.add_device(t)
     t.start()
     while True:
         input_str = input('Run command: ')
