@@ -83,7 +83,7 @@ class Cpu(object):
 
     def ready_to_int(self):
         return not self.is_int_level() and self.alive
-        
+
     def is_int_enable(self):
         return (self.cp0_reg_file[self.cp0_name['status']] & 1) != 0
 
@@ -234,6 +234,7 @@ class Bus(object):
         elif address < 0xffff0000:
             device = self.vram
         else:
+            print('read in external device at', address)
             device = self.external_device
         return device
 
@@ -264,17 +265,38 @@ class Ram(object):
 
 class VideoRam(object):
     def __init__(self):
-        self.memory = [0] * 2**19
+        self.memory = [0] * (2**19)
 
-        count = 0
-        for x in 'abcedfg':
-            self.memory[count] = int(ord(x)) << 3;
-            count += 1
+        # count = 0
+        # for x in 'a'*79:
+        #     self.memory[count] = int(ord(x)) << 3;
+        #     count += 1
 
+        # count = 0
+        # for x in 'b'*79:
+        #     self.memory[(1 << 7) + count] = int(ord(x)) << 3;
+        #     count += 1
+
+        # count = 0
+        # for x in 'c'*78:
+        #     self.memory[(2 << 7) + count] = int(ord(x)) << 3;
+        #     count += 1
+
+        # count = 0
+        # for x in 'd'*76:
+        #     self.memory[(3 << 7) + count] = int(ord(x)) << 3;
+        #     count += 1
+
+        # count = 0
+        # for x in 'e'*75:
+        #     self.memory[(4 << 7) + count] = int(ord(x)) << 3;
+        #     count += 1
     def read(self, address):
         address &= 0x1fffff
         return self.memory[address >> 2]
+
     def write(self, address, data):
+        print('vram write at', address)
         address &= 0x1fffff
         self.memory[address >> 2] = data
 
@@ -313,8 +335,12 @@ def main():
     if len(machineCode) == 0:
         print('No content of code')
         exit()
-
-    vm = VirtualMachine([int(x, 2) for x in machineCode.split('\n')])
+    
+    codes = []
+    for x in machineCode.split('\n'):
+        if len(x) > 0:
+            codes.append(int(x, 2))
+    vm = VirtualMachine(codes)
     t = ed.ExternalDevice(vm)
     vm.bus.add_device(t)
     t.start()

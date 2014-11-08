@@ -12,12 +12,21 @@ class KeyBoard(threading.Thread):
         super(KeyBoard, self).__init__()
         self.cpu = cpu
         self.running = False
+        # self.buffer = []
 
     def write(self, address, data):
         raise Exception("Not implemented") 
 
-    def read(self, address, data):
-        raise Exception("Not implemented")
+    def read(self, address):
+        address &= 0xff
+        data = 0
+        if address == 0:
+            data = self.scan_code
+            print('read in keyboard device')
+            self.scan_code = 0
+        else:
+            raise Exception("Invalid address")
+        return data
 
     def run(self):
         self.running = True
@@ -25,9 +34,10 @@ class KeyBoard(threading.Thread):
         while True:
             if not self.running:
                 break
-            for event in pygame.event.get(KEYDOWN):
+            for event in pygame.event.get([KEYDOWN]):
                 if self.cpu.ready_to_int():
                     self.cpu.keyboard_int = True
+                    self.scan_code = event.key
 
     def stop(self):
         self.running = False
@@ -83,7 +93,8 @@ class VideoGraphArray(threading.Thread):
                 break
             px_arr[:] = (255, 255, 255)
             for x in range(SCREEN_WIDTH):
-                for y in range(SCREEN_HEIGHT):
+                # for y in range(SCREEN_HEIGHT):
+                for y in range(0, 16):
                     self.draw(px_arr, x, y)
             self.screen.blit(px_arr.make_surface(), (0, 0))
             pygame.display.update()
@@ -106,7 +117,7 @@ class VideoGraphArray(threading.Thread):
             block_y = int(y / height)
             char_x = x % width
             char_y = y % height
-            address = VRAM_ADDRESS + (((block_y << 5) + block_x) << 2)
+            address = VRAM_ADDRESS + (((block_y << 7) + block_x) << 2)
             data = self.bus.read(address)
             r = int(((data >> 2) & 1) * 255)
             g = int(((data >> 1) & 1) * 255)
@@ -132,11 +143,14 @@ class ExternalDevice(threading.Thread):
         self.keyboard = None
         self.running = False
 
-    def address_map(address):
+    def address_map(self, address):
         device = None
-        address = (address & 0xffff) >> 16
+        print('address is', address)
+        address = (address & 0xffff) >> 8
         if address == 0:
             device = self.vga
+        elif address == 1:
+            device = self.keyboard
         else:
             raise Exception('Unkown external device address')
         return device
