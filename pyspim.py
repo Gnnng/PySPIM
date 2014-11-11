@@ -106,9 +106,10 @@ class Cpu(object):
 
     def set_int_level(self, flag):
         if flag:
-            self.cp0_reg_file[self.cp0_name['status']] |= 0b01
+            self.cp0_reg_file[self.cp0_name['status']] |= 0b10
         else:
             self.cp0_reg_file[self.cp0_name['status']] &= 0xfffffffd
+
     def run(self):
         while True:
             self.step()
@@ -128,26 +129,29 @@ class Cpu(object):
         imme = (inst) & 0xffff 
         addr = (inst) & 0x03ffffff
         signed_ext_16_to_32 = lambda x: {0: x, 1: -(2**16 - x)}[(x >> 15) & 1]
+        self.int_hit = False
         if self.is_int_enable() and not self.is_int_level(): # allow int
-            self.int_hit = False
             if self.keyboard_int: # key int
+                self.set_int_level(True)
+                self.int_hit = True
                 print('Got keyboard int')
                 self.keyboard_int = False
                 self.set_excode(0)      
                 self.epc = pc;
                 pc = self.int_all_address
+                print('pc in int', pc)
+            elif opcode == 0 and func == 0xc: # syscall
                 self.set_int_level(True)
                 self.int_hit = True
-            elif opcode == 0 and func == 0xc: # syscall
                 self.set_excode(8)
                 self.epc = pc + 4 # can add 4 in the interrupt service
                 pc = self.int_all_address
-                self.set_int_level(True)
-                self.int_hit = True
+
 
         if self.int_hit:
-            self.reg_file[0] = 0
-            self.pc = pc
+            pass
+            # self.reg_file[0] = 0
+            # self.pc = pc
         elif opcode == 0b000000:
             # r - type
             alu_op = aop.convert_func(func)
@@ -163,7 +167,6 @@ class Cpu(object):
                 pc = pc + 4
             elif func == 0b001000:  # jump
                 pc = self.reg_file[rs]
-            # elif func = 0xc: # syscall
 
         else:
             alu_op = aop.convert_opcode(opcode)
@@ -210,6 +213,7 @@ class Cpu(object):
                     self.cp0_reg_file[rd] = self.reg_file[rt]
                     pc = pc + 4
                 elif rs == 16 and func == 0x18: # eret
+                    print("return from int", self.epc)
                     self.set_int_level(False) # exiting interrupt
                     pc = self.epc
 
@@ -234,7 +238,7 @@ class Bus(object):
         elif address < 0xffff0000:
             device = self.vram
         else:
-            print('read in external device at', address)
+            # print('read in external device at', address)
             device = self.external_device
         return device
 

@@ -34,10 +34,14 @@ class KeyBoard(threading.Thread):
         while True:
             if not self.running:
                 break
-            for event in pygame.event.get([KEYDOWN]):
+            for event in pygame.event.get([KEYDOWN, KEYUP]):
+                time.sleep(0.1)
                 if self.cpu.ready_to_int():
+                    if event.type == KEYDOWN:
+                        self.scan_code = event.key + (1 << 16);
+                    elif event.type == KEYUP:
+                        self.scan_code = event.key;
                     self.cpu.keyboard_int = True
-                    self.scan_code = event.key
 
     def stop(self):
         self.running = False
@@ -171,7 +175,7 @@ class ExternalDevice(threading.Thread):
 
         # event settings
         pygame.event.set_allowed(None)
-        pygame.event.set_allowed([KEYDOWN, QUIT])
+        pygame.event.set_allowed([KEYDOWN, KEYUP, QUIT])
 
         # start vga
         self.vga = VideoGraphArray(self.vm.bus)
