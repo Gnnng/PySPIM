@@ -1,4 +1,4 @@
-.text
+.text 12
 mfc0 $t0,$t1
 mtc0 $t1,$13
 break
@@ -2140,7 +2140,7 @@ putchar_end:
 		jr 		$ra
 
 
-.data
+.data 1000000
 #################### data area
 gill_hint:		.asciiz		"Gnnng@Gill: ~ $ "
 reboot_name: 	.asciiz 	"reboot"
