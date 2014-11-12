@@ -6,16 +6,16 @@
 .text 0x00000000
 #interrupt address initialization
 	#int00
-	la	$t0, int00
-	la	$t1, INT00_SERVICE
-	sw	$t1, 0($t0)
+	#la	$t0, int00
+	#la	$t1, INT00_SERVICE
+	#sw	$t1, 0($t0)
 	#int08
-	la	$t0, int08
-	la	$t1, INT08_SERVICE
-	sw	$t1, 0($t0)
+	#la	$t0, int08
+	#la	$t1, INT08_SERVICE
+	#sw	$t1, 0($t0)
 #jump to kernel initialization
 	j	KERNEL_INIT
-.text 0x00000010
+.text 0x00000004
 #interrupt handler
 INT_HANDLER:
 	#use $k0, $k1
@@ -33,8 +33,8 @@ INT_HANDLER:
 .data 0x00000100
 #interrupt vector table
 #init 0，everytime the program runs，load it
-	int00:	.word	0 #all external interrupt
-	int08:	.word	0 #syscall
+	int00:	.word	INT00_SERVICE #all external interrupt
+	int08:	.word	INT08_SERVICE #syscall
 .text 0x00000200
 #interrupt services
 INT_SERVICES:
