@@ -4,12 +4,12 @@
 #Func: OS on System         #
 #############################
 .text 0x00000000
-interrupt address initialization
-	int00
+#interrupt address initialization
+	#int00
 	la	$t0, int00
 	la	$t1, INT00_SERVICE
 	sw	$t1, 0($t0)
-	int08
+	#int08
 	la	$t0, int08
 	la	$t1, INT08_SERVICE
 	sw	$t1, 0($t0)
