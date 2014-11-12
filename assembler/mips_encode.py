@@ -112,7 +112,7 @@ def encode(input_list):
 			word_instruction_list+=[instruction]
 			continue
 		print("=====now instruction=====",instruction.content,"|label:",instruction.label)
-		if (instruction.type=='data'):
+		if (instruction.type=='data' or instruction.type=='text'):
 			print('now content:'+instruction.content)
 			if (instruction.label):
 				for each_label in instruction.label:
@@ -133,24 +133,25 @@ def encode(input_list):
 							print("!@#$%",max_address,index)
 							print("gill_hint[low]="+hex(label_list['gill_hint[low]']))
 			print ('======data======')
-			newdatas=initdata(instruction.content)
-			word_cut=4
-			while (word_cut<len(newdatas)):
+			if (instruction.type=='data'):
+				newdatas=initdata(instruction.content)
+				word_cut=4
+				while (word_cut<len(newdatas)):
+					temp=UserInstruction()
+					temp.code=''.join(newdatas[word_cut-4:word_cut])
+					temp.type='data'
+					word_instruction_list+=[temp]
+					index+=1
+					word_cut+=4
 				temp=UserInstruction()
-				temp.code=''.join(newdatas[word_cut-4:word_cut])
+				print (newdatas[word_cut-4:])
+				temp.code=''.join(newdatas[word_cut-4:])+((word_cut-len(newdatas))*8)*'0'
 				temp.type='data'
 				word_instruction_list+=[temp]
 				index+=1
-				word_cut+=4
-			temp=UserInstruction()
-			print (newdatas[word_cut-4:])
-			temp.code=''.join(newdatas[word_cut-4:])+((word_cut-len(newdatas))*8)*'0'
-			temp.type='data'
-			word_instruction_list+=[temp]
-			index+=1
 			# data_set+=newdatas
 			# max_address+=len(newdatas)			
-		else:
+		if (instruction.type=='text'):
 			word_instruction_list+=[instruction]
 			if (instruction.label):
 				print ("handling labellist",instruction.label)
