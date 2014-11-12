@@ -3,8 +3,8 @@
 #Auth: Bai Long             #
 #Func: OS on System         #
 #############################
-.text(0x0000_0000)
-#中断地址初始化
+.text 0x00000000
+#interrupt address initialization
 	#int00
 	la	$t0, int00
 	la	$t1, INT00_SERVICE
@@ -13,30 +13,30 @@
 	la	$t0, int08
 	la	$t1, INT08_SERVICE
 	sw	$t1, 0($t0)
-#跳转内核初始化
+#jump to kernel initialization
 	j	KERNEL_INIT
-.text(0x0000_0010)
-#中断入口
+.text 0x00000010
+#interrupt handler
 INT_HANDLER:
-	#使用$k0, $k1
+	#use $k0, $k1
 	#$12: Status, $13: Cause, $14: EPC
-	#$ra入栈
+	#push $ra
 	addi	$sp, $sp, -4
 	sw	$ra, 0($sp)
-	#状态寄存器Status的2~6位表示中断号
+	#Status 2~6 bit represents interrupt value
 	mfc0	$k0, $13 #$12: Status
-	andi	$k0, $k0, 0x007C #2~6位
-	addi	$k0, $k0, 0x0100 #跳转中断
-	lw	$k0, 0($k0)	 #取到地址
+	andi	$k0, $k0, 0x007C #2~6 bits
+	addi	$k0, $k0, 0x0100 #jump to interrupt
+	lw	$k0, 0($k0)	 #get the address
 	jalr	$k0
 	eret
-.data(0x0000_0100)
-#中断向量表
-#初始化为0，每次开始运行程序时，将地址加载入相应存储单元
+.data 0x00000100
+#interrupt vector table
+#init 0，everytime the program runs，load it
 	int00:	.word	0 #all external interrupt
 	int08:	.word	0 #syscall
-.text(0x0000_0200)
-#中断服务
+.text 0x00000200
+#interrupt services
 INT_SERVICES:
 INT00_SERVICE:
 	#external interrupt
@@ -74,10 +74,10 @@ INT08_PRINT_STRING:
 	sw	$a1, 16($sp)
 	sw	$a2, 20($sp)
 	sw	$t1, 24($sp)
-	#调用PRINT_CHAR
+	#jal SHOW_CHAR
 	add	$t0, $a0, $zero
 PRINT_STRING_LOOP:
-	lw	$a0, 0($t0) #a0中为ascii，t0中为地址
+	lw	$a0, 0($t0) #a0 ascii，t0 address
 	beq	$a0, $zero, PRINT_STRING_END_LOOP
 	#Cursor
 	lui	$t1, 0xffff
@@ -102,7 +102,7 @@ PRINT_STRING_END_LOOP:
 	#return
 	jr	$ra
 SHOW_CHAR:
-	#a0表示ascii码，a1是X坐标，a2是Y坐标
+	#a0 ascii，a1 X，a2 Y
 	addi	$sp, $sp, -8
 	sw	$t0, 0($sp)
 	sw	$a0, 4($sp)
@@ -130,7 +130,7 @@ INT08_PRINT_CHAR:
 	sw	$a1, 12($sp)
 	sw	$a2, 16($sp)
 	sw	$t0, 20($sp)
-	#a0为字符ascii码，a1为X坐标，a2为Y坐标
+	#a0 ascii，a1 X，a2 Y
 	#Cursor
 	lui	$t0, 0xffff
 	ori	$t0, 0x0000
@@ -155,8 +155,8 @@ INT08_PRINT_CHAR:
 #	CursorY	.word
 .data
 	hi .asciiz "hello world!"
-.text(0x0000_1000)
-#操作系统开始运行
+.text 0x00001000
+#Kernel initialization begin
 KERNEL_INIT:
 	la	$a0, hi
 	addi	$v0, $zero, 8
