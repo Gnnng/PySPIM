@@ -107,7 +107,7 @@ class VideoGraphArray(threading.Thread):
         self.running = False
 
     def draw(self, px_arr, x, y):
-        width = 8
+        width = 16
         height = 16
         if (self.mode):
             address = VRAM_ADDRESS + (((y << 10) + x) << 2)

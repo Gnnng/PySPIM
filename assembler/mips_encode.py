@@ -17,11 +17,29 @@ def encode(input_list):
 			continue
 		if (instruction_input[0]=="#"):
 			continue
-		if (instruction_input=='.data'):
+		if (instruction_input.split(" ")[0]=='.data'):
 			mode='data'
+			try:
+				temploc=UserInstruction();
+				temploc.type="location"
+				temploc.content=instruction_input.split(" ")[1]
+			except:
+				temploc=None
+				continue
+			print("append")
+			instruction_list.append(temploc)
 			continue
-		if (instruction_input=='.text'):
+		if (instruction_input.split(" ")[0]=='.text'):
 			mode='text'
+			try:
+				temploc=UserInstruction();
+				temploc.type="location"
+				temploc.content=instruction_input.split(" ")[1]
+			except:
+				temploc=None
+				continue
+			print("append")
+			instruction_list.append(temploc)
 			continue
 		if (mode=='data'):
 			if (temp):
@@ -68,6 +86,10 @@ def encode(input_list):
 	for each_label in variable_list:
 		print (each_label)
 	for instruction in instruction_list:
+		print ("type",instruction.type)
+		if (instruction.type=="location"):
+			real_instruction_list+=[instruction]
+			continue
 		print("=====now instruction=====",instruction.content,"|label:",instruction.label)
 		if (instruction.type=='text'):
 			new_real_list=pesudo_encode(instruction,variable_list)
@@ -82,9 +104,15 @@ def encode(input_list):
 	print("===real instruction start===")
 	index=0
 	word_instruction_list=[]
+	now_begin=0
 	for instruction in real_instruction_list:
+		if (instruction.type=="location"):
+			now_begin=eval(instruction.content)
+			index=0;
+			word_instruction_list+=[instruction]
+			continue
 		print("=====now instruction=====",instruction.content,"|label:",instruction.label)
-		if (instruction.type=='data'):
+		if (instruction.type=='data' or instruction.type=='text'):
 			print('now content:'+instruction.content)
 			if (instruction.label):
 				for each_label in instruction.label:
@@ -94,7 +122,7 @@ def encode(input_list):
 						raise ValueError('redefine label:'+each_label)
 					except:
 						
-						address=index*4
+						address=index*4+now_begin
 						address_code=get_code(address,32)
 						high_code=address_code[:16]
 						low_code=address_code[16:]
@@ -105,24 +133,25 @@ def encode(input_list):
 							print("!@#$%",max_address,index)
 							print("gill_hint[low]="+hex(label_list['gill_hint[low]']))
 			print ('======data======')
-			newdatas=initdata(instruction.content)
-			word_cut=4
-			while (word_cut<len(newdatas)):
+			if (instruction.type=='data'):
+				newdatas=initdata(instruction.content)
+				word_cut=4
+				while (word_cut<len(newdatas)):
+					temp=UserInstruction()
+					temp.code=''.join(newdatas[word_cut-4:word_cut])
+					temp.type='data'
+					word_instruction_list+=[temp]
+					index+=1
+					word_cut+=4
 				temp=UserInstruction()
-				temp.code=''.join(newdatas[word_cut-4:word_cut])
+				print (newdatas[word_cut-4:])
+				temp.code=''.join(newdatas[word_cut-4:])+((word_cut-len(newdatas))*8)*'0'
 				temp.type='data'
 				word_instruction_list+=[temp]
 				index+=1
-				word_cut+=4
-			temp=UserInstruction()
-			print (newdatas[word_cut-4:])
-			temp.code=''.join(newdatas[word_cut-4:])+((word_cut-len(newdatas))*8)*'0'
-			temp.type='data'
-			word_instruction_list+=[temp]
-			index+=1
 			# data_set+=newdatas
 			# max_address+=len(newdatas)			
-		else:
+		if (instruction.type=='text'):
 			word_instruction_list+=[instruction]
 			if (instruction.label):
 				print ("handling labellist",instruction.label)
@@ -131,7 +160,7 @@ def encode(input_list):
 						test=label_list[each_label]
 						raise ValueError('redefine label:'+instruction.label)
 					except:
-						label_list[each_label]=index
+						label_list[each_label]=index+now_begin//4
 			index+=1
 	print ("======label list======")
 	for each_label in label_list:
@@ -144,22 +173,51 @@ def encode(input_list):
 			instruction.code=single_encode(instruction.content,label_list,index)
 	# result_file=file('code.txt','w')
 	result_file=open('code.txt','w')
+	now_loc=0
+	loc_ins={}
+	max_loc=0
 	for instruction in word_instruction_list:
+		if (instruction.type=="location"):
+			print("loc!")
+			print(instruction.content)
+			now_loc=eval(instruction.content)//4
+			if (now_loc>max_loc):
+				max_loc=now_loc
+			continue
+
 		# pass
 		# if (instruction.type=='text'):
 		print (instruction.content)
 		# result_file.write(instruction.code+'\n')
-		print (instruction.code,file=result_file)
+		# print (instruction.code,file=result_file)
+		loc_ins[now_loc]=instruction.code;
+		now_loc+=1
 			# print (instruction.code)
-		a=instruction.code;
-		a='0b'+a;
-		print(hex(int(a,2)));
+		try:
+			a=instruction.code;
+			a='0b'+a;
+			print(hex(int(a,2)));
+		except:
+			pass
 	# print data_set
-
+	i=0
+	flag=0
+	print("maxloc",max_loc)
+	while True:
+		try:
+			print (loc_ins[i],file=result_file)
+		except:
+			if (flag==1):
+				break;
+			print ("00000000000000000000000000000000",file=result_file)
+		if (i==max_loc):
+			flag=1
+		i+=1
 changeline=0
 print("========program start=======")
 ins_file=open('instruction.txt')
 input_list=[]
+
 for line in ins_file:
 	input_list.append(line[:-1])
 	# print (line[:-1])
