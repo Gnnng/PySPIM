@@ -49,15 +49,19 @@ class Tinstruction:
 				if (Setup.special_syscall==True):	
 					syscall_num=eval(mips_asm);
 					syscall_num_code=get_code(syscall_num,10);
-					self.func="0000000000000000"+syscall_num_code+"001100"
-			code+=self.func;
+					code="0000000000000000"+syscall_num_code+"001100"
+				else:
+					code=self.func
+			else:
+				code=self.func;
 			return code
 		if (self.type=='R' or self.type=='R1'):
 			if (self.type=='R'):
 				code=code+'000000'
+				tail=self.func
 			else:
 				code=code+self.func
-				self.func='000000'
+				tail='000000'
 			reg_tofill=['rs','rt','rd','shamt']
 			for each_reg in reg_tofill:
 				try:
@@ -75,7 +79,7 @@ class Tinstruction:
 					except IndexError:
 						regcode='00000'
 				code=code+regcode
-			code=code+self.func
+			code=code+tail
 			return code
 		if (self.type=='I'):
 			code=code+self.func
