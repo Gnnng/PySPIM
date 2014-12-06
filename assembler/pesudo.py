@@ -27,16 +27,18 @@ def encode_pesudo_li(origin_instruction,var_list):
 	li_match=re.compile('(?P<rs>.*?),(?P<immediate>.*)').match(origin_instruction)
 	if (not li_match):
 		raise ValueError('Instruction syntax error')	
-	immediate=la_match.group('immediate')
-	rs=la_match.group('rs')
+	immediate=li_match.group('immediate')
+	rs=li_match.group('rs')
 	real_list=[]
 	try:
 		immediate=eval(immediate)
+		print(immediate)
 		immediate_code=get_code(immediate,32)
+		print(immediate_code)
 		high_code=immediate_code[:16]
-		low_code=immediate[16:]
-		real_list+=['lui'+rs+','+'0b'+high_code]
-		real_list+=['ori'+rs+','+rs+','+'0b'+low_code]
+		low_code=immediate_code[16:]
+		real_list+=['lui '+rs+','+'0b'+high_code]
+		real_list+=['ori '+rs+','+rs+','+'0b'+low_code]
 	except SyntaxError:
 		raise ValueError('Error expression:'+ immediate)
 	return real_list
