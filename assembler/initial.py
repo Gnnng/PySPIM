@@ -68,11 +68,16 @@ class Tinstruction:
 			reg_tofill=['rs','rt'];
 			for each_reg in reg_tofill:
 				try:
-					regcode=default_list[each_reg]
+					print ("now reg:"+each_reg)
+					print (self.default_list)
+					regcode=self.default_list[each_reg]
+					print ("now reg code:"+regcode)
 				except:
 					try:
 						regname=match_result.group(each_reg)
+						print ("now reg:"+regname)
 						regcode=Treg(regname).binnum
+						print ("now reg code:"+regcode)
 					except IndexError:
 						regcode='00000'
 				code=code+regcode
@@ -155,11 +160,11 @@ instruction_template['sltiu']=Tinstruction('sltiu','I','(?P<rt>.*?), *(?P<rs>.*?
 instruction_template['beq']=Tinstruction('beq','I','(?P<rs>.*?), *(?P<rt>.*?), *(?P<label>.*)','000100')
 instruction_template['bgez']=Tinstruction('bgez','I','(?P<rs>.*?), *(?P<label>.*)','000001',{'rt':'00001'})
 instruction_template['bgezal']=Tinstruction('bgezal','I','(?P<rs>.*?), *(?P<label>.*)','000001',{'rt':'10001'})
-instruction_template['bgtz']=Tinstruction('bgtz','I','(?P<rs>.*?), *(?P<label>.*)','000111',{'rt':'10001'})
+instruction_template['bgtz']=Tinstruction('bgtz','I','(?P<rs>.*?), *(?P<label>.*)','000111',{'rt':'00000'})
 instruction_template['blez']=Tinstruction('blez','I','(?P<rs>.*?), *(?P<label>.*)','000110',{'rt':'00000'})
 instruction_template['bltzal']=Tinstruction('bltzal','I','(?P<rs>.*?), *(?P<label>.*)','000001',{'rt':'10000'})
 instruction_template['bltz']=Tinstruction('bltz','I','(?P<rs>.*?), *(?P<label>.*)','000001',{'rt':'00000'})
-instruction_template['bne']=Tinstruction('bne','I','(?P<rs>.*?), *(?P<rt>.*?), *(?P<label>.*)','000001')
+instruction_template['bne']=Tinstruction('bne','I','(?P<rs>.*?), *(?P<rt>.*?), *(?P<label>.*)','000101')
 instruction_template['sll']=Tinstruction('sll','R','(?P<rt>.*?), *(?P<rd>.*?), *(?P<shamt>.*)','000000')
 instruction_template['srl']=Tinstruction('srl','R','(?P<rt>.*?), *(?P<rd>.*?), *(?P<shamt>.*)','000010')
 instruction_template['sra']=Tinstruction('sra','R','(?P<rt>.*?), *(?P<rd>.*?), *(?P<shamt>.*)','000011')
