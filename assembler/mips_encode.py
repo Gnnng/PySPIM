@@ -10,6 +10,7 @@ def encode(input_list):
 	data_set=[]
 	for instruction_input in input_list:
 		instruction_input=instruction_input.strip()
+		print (instruction_input)
 		print("======NOW instruction======")
 		print (instruction_input)
 		print("===========================")
@@ -215,6 +216,7 @@ def encode(input_list):
 		i+=1
 changeline=0
 print("========program start=======")
+# ins_file=open('instruction.txt')
 ins_file=open('instruction.txt')
 input_list=[]
 
