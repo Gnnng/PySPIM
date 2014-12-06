@@ -1,5 +1,7 @@
 from single_instruction import *
 from data_handle import *
+import sys
+from setup import Setup
 def encode(input_list):
 	mode=''
 	instruction_list=[]
@@ -216,10 +218,13 @@ def encode(input_list):
 		i+=1
 changeline=0
 print("========program start=======")
-# ins_file=open('instruction.txt')
 ins_file=open('instruction.txt')
+# ins_file=open('test_error.s')
 input_list=[]
-
+global special_syscall
+if (len(sys.argv)>=2):
+	if (sys.argv[1]=="-s"):
+		Setup.special_syscall=True
 for line in ins_file:
 	input_list.append(line[:-1])
 	# print (line[:-1])

@@ -1,4 +1,5 @@
 import re
+from setup import Setup
 def get_code(num,i):
 	code=bin(num)
 	filled=i*'0'
@@ -35,14 +36,21 @@ class Tinstruction:
 		self.type=Itype
 		self.regular=re.compile(regular)
 		self.default_list=default_list
+		self.ope_s=ope_s
 	def mips_code(self,mips_asm,index,label_list):
 		print ("begin coding each")
 		code=''
+
 		match_result=self.regular.match(mips_asm)
 		if  (not match_result):
 			raise ValueError('Instruction syntax error')
 		if (self.type=='S'):
-			code+=self.func
+			if (self.ope_s=="syscall"):
+				if (Setup.special_syscall==True):	
+					syscall_num=eval(mips_asm);
+					syscall_num_code=get_code(syscall_num,10);
+					self.func="0000000000000000"+syscall_num_code+"001100"
+			code+=self.func;
 			return code
 		if (self.type=='R' or self.type=='R1'):
 			if (self.type=='R'):
@@ -53,13 +61,19 @@ class Tinstruction:
 			reg_tofill=['rs','rt','rd','shamt']
 			for each_reg in reg_tofill:
 				try:
-					if (each_reg=="shamt"):
-						regcode=get_code(int(match_result.group(each_reg)),5)
-					else:
-						regname=match_result.group(each_reg)
-						regcode=Treg(regname).binnum
-				except IndexError:
-					regcode='00000'
+					print ("now reg:"+each_reg)
+					print (self.default_list)
+					regcode=self.default_list[each_reg]
+					print ("now reg code:"+regcode)
+				except:
+					try:
+						if (each_reg=="shamt"):
+							regcode=get_code(int(match_result.group(each_reg)),5)
+						else:
+							regname=match_result.group(each_reg)
+							regcode=Treg(regname).binnum
+					except IndexError:
+						regcode='00000'
 				code=code+regcode
 			code=code+self.func
 			return code
