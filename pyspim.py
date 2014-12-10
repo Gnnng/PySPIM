@@ -498,8 +498,7 @@ def main():
 if __name__ == '__main__':
     try:
         main()
-    except KeyboardInterrupt:
-        print('Got KeyboardInterrupt')
-        
+    except:
+        print('Exiting')
         os._exit(0)
 
