@@ -218,7 +218,7 @@ def encode(input_list):
 		i+=1
 changeline=0
 print("========program start=======")
-ins_file=open('instruction.txt')
+ins_file=open(sys.argv[1])
 # ins_file=open('test_error.s')
 input_list=[]
 global special_syscall
