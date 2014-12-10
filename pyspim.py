@@ -4,6 +4,7 @@ import sys
 import control_fsm as fsm
 import alu_operation as aop
 import external_device as ed
+import os
 
 RESET = 0
 
@@ -59,6 +60,10 @@ def alu_calc(operation, op1, op2):
             result = 0
     return (result, result == 0, carry, overflow)
 
+def full_hex(x):
+    h = hex(x)
+    return '0'*(8 - (len(h) - 2)) + h[2:]
+
 class Cpu(object):
     
     def __init__(self, bus):
@@ -74,13 +79,18 @@ class Cpu(object):
         self.cp0_name = {
             'status': 12,
             'cause': 13,
-            'epc': 14
+            'epc': 14,
+            'ebase': 15
         }
         self.int_all_address = 0x80
         self.int_vector_table = 0x100
         self.set_int_enable()
         self.alive = False
-
+        self.old_pc = 0
+        self.reglist=["ze","at","v0","v1","a0","a1","a2","a3","t0",\
+            "t1","t2","t3","t4","t5","t6","t7","s0","s1","s2","s3",\
+            "s4","s5","s6","s7","t8","t9","k0","k1","gp","sp","fp","ra"]
+        self.old_reg_file = [0] * 32
     def ready_to_int(self):
         return not self.is_int_level() and self.alive
 
@@ -98,11 +108,35 @@ class Cpu(object):
         self.cp0_reg_file[self.cp0_name['cause']] |= (code << 2)
         
 
-    def peek(self):
-        print('Instruction', hex(int(self.instruction)))
-        print('PC', hex(int(self.pc)))
-        # print('Flags', self.zero, self.carry, self.overflow)
-        print('Regs', self.reg_file)
+    def peek(self, pr=False, pe=False):
+        # if pr == None:
+        #     pr == True;
+        # if pe == None;
+        #     pe == False;
+        print('=== current ===')
+        print('Current PC', full_hex(self.old_pc))
+        if pr:
+            print('Curret regs')
+            reg_lines = ''
+            for i in range(32):
+                flag = self.old_reg_file[i] != self.reg_file[i]
+                if flag:
+                    print(' \032', end='')
+                else:
+                    print('  ', end='')
+                print(' $'+self.reglist[i]+'\t'+full_hex(self.reg_file[i]), end='')
+                if i % 4 == 3:
+                    print()
+        # print(reg_lines)
+        print('==== next ====')
+        if pe:
+            print('Next cp0 regs')
+            for k in self.cp0_name:
+                print('$' + k.ljust(8), full_hex(self.cp0_reg_file[self.cp0_name[k]]))
+            print()
+        print('Next PC', full_hex(self.pc))
+        print('Next instruction', full_hex(self.instruction))
+        return self.pc // 4;
 
     def set_int_level(self, flag):
         if flag:
@@ -118,6 +152,8 @@ class Cpu(object):
         """run one instruction at one time"""
         self.alive = True
         pc = self.pc
+        self.old_pc = pc
+        self.old_reg_file = self.reg_file[:]
         inst = self.bus.read(pc)
         self.instruction = inst
         opcode = (inst >> 26) & 0x3f
@@ -268,9 +304,26 @@ class Ram(object):
         address &= 0xffff
         self.memory[address >> 2] = data
 
-    def peek(self, start = 0, len = 10):
-        for i in range(start, start + len):
-            print("Ram ", hex(i << 2), hex(int(self.memory[i << 2])))
+    def peek(self, start_addr = 0):
+        print('========= ram ==========')
+        for i in range(start_addr >> 2, (start_addr >> 2) + 32, 4):
+            ram_line = '0x' + full_hex(i << 2) + ': '
+            line_tail = ' '
+            for j in range(i, i + 4):
+                hex_str = full_hex(self.memory[j])
+                ram_line += ' ' + hex_str
+                for k in range(0, 4):
+                    x = 'b"\\x' + hex_str[k*2:k*2+2] + '"'
+                    y = eval(x)
+                    if (len(str(y))) == 4:
+                        y = str(y)[2:3]
+                    else:
+                        y = '.'
+                    line_tail += y#str(eval('b"\\x' + hex_str[k*2:k*2+2] + '"'))
+            ram_line += line_tail
+            print(ram_line)
+
+
 class VideoRam(object):
     def __init__(self):
         self.memory = [0] * (2**19)
@@ -326,16 +379,19 @@ class VirtualMachine(object):
         self.cpu.step()
 
     def peek(self):
-        self.cpu.peek()
+        return self.cpu.peek()
         #self.ram.peek()
 
     def reset(self):
         pass
 
 def main():
+    disasm_code = None
     if (len(sys.argv) == 2):
         with open(sys.argv[1]) as code_file:
             machineCode = code_file.read()
+        with open('disasm.txt') as disasm_file:
+            disasm_code = disasm_file.readlines()
     else:
         machineCode = input(
             'Please input machine code, one instruction per line\n')
@@ -353,22 +409,97 @@ def main():
     vm.bus.add_device(t)
     t.start()
     while True:
-        input_str = input('Run command: ')
-        if input_str == 's' or input_str == 'step' or input_str == '':
-            vm.step()
-            vm.peek()
-        elif input_str == 'r' or input_str == 'run':
-            vm.run()
-        elif input_str == 't' or input_str == 'test':
-            for i in range(100000):
+        try:
+            input_str = input('Run command: ')
+            if input_str == 's' or input_str == 'step' or input_str == '':
                 vm.step()
-        elif input_str == 'p' or input_str == 'peek':
-            vm.cpu.peek()
-            vm.ram.peek()
-        elif input_str == 'e' or input_str == 'exit':
-            print("Exiting...")
+                lineNo = vm.peek()
+                print(disasm_code[lineNo])
+            elif input_str == 'r' or input_str == 'run':
+                vm.run()
+            elif input_str == 't' or input_str == 'test':
+                for i in range(100000):
+                    vm.step()
+            elif input_str.startswith('p') or input_str.startswith('peek'):
+                pr = input_str.find('r') != -1
+                pe = input_str.find('e') != -1
+                lineNo = vm.cpu.peek(pr, pe)
+                print(disasm_code[lineNo])
+            elif input_str == 'l' or input_str == 'list':
+                lineNo = vm.cpu.old_pc // 4
+                for i in range(vm.cpu.old_pc // 4 - 5, vm.cpu.old_pc//4 + 5):
+                    if i >= 0 and i < len(disasm_code):
+                        if i != lineNo:
+                            print('   ' + disasm_code[i], end='')
+                        else:
+                            print(' \032 ' + disasm_code[i], end='')
+                print()
+            elif input_str[0] == 'n' or input_str[0:4] == 'next':
+                n = '0' + input_str.strip('next ')
+                print(int(n))
+                for i in range(int(n)):
+                    print('PC ', full_hex(vm.cpu.old_pc))
+                    vm.step()
+                lineNo = vm.peek()
+                print(disasm_code[lineNo])
+            elif input_str.startswith('b') or input_str.startswith('break'):
+                n = input_str.strip('break ')
+                flag = False
+                for i in range(10000):
+                    vm.step()
+                    if vm.cpu.old_pc == eval(n):
+                        break
+                        flag = True
+                if not flag:
+                    raise Exception('Dead loop in execution of "' + input_str + '"')
+            elif input_str.startswith('m') or input_str.startswith('memory'):
+                n = input_str.strip('memory ')
+                if len(n) == 0:
+                    n += '0'
+                vm.ram.peek(eval(n))
+            elif input_str == 'e' or input_str == 'exit':
+                print("Exiting...")
+                t.stop()
+                exit()
+            else:
+                print('Unkown command. PySPIM support commands as follows')
+                indent = 20
+                help_info = '\n'+\
+                '  s[tep]'.ljust(indent) +\
+                    'Run one step\n' +\
+                '  n[ext] [n]'.ljust(indent) +\
+                    'Run for n steps\n' +\
+                '  t[est]'.ljust(indent) +\
+                    'Run about 100000 times\n' +\
+                '  r[un]'.ljust(indent) +\
+                    'Run forever\n'+\
+                '  p[eek]'.ljust(indent) +\
+                    'Peek at the VM\n'+\
+                '  l[ist]'.ljust(indent) +\
+                    'List codes near PC\n'+\
+                '  m[emory] [addr]'.ljust(indent) +\
+                    'Dump memory content start at address(e.g 0x10 or 32)\n' +\
+                '  b[reak] [addr]'.ljust(indent) +\
+                    'Break at address (e.g. 0x10 or 32)\n' +\
+                '  e[xit]'.ljust(indent) +\
+                    'Exit PySPIM\n\n' +\
+                '  Use Ctrl+C to exit at any time\n'
+                print(help_info)
+        except Exception as ex:
+            print(str(ex))
+            print('============ VM info ============')
+            print()
+            lineNo = vm.peek()
+            print(disasm_code[lineNo])
+            print('============ Exception ==========')
             t.stop()
-            exit()
+            raise ex
 
 if __name__ == '__main__':
-    main()
+    try:
+        main()
+    except KeyboardInterrupt:
+        print('Got KeyboardInterrupt')
+        
+        os._exit(0)
+
