@@ -155,6 +155,7 @@ def encode(input_list):
 			# data_set+=newdatas
 			# max_address+=len(newdatas)			
 		if (instruction.type=='text'):
+			instruction.index=index+now_begin//4
 			word_instruction_list+=[instruction]
 			if (instruction.label):
 				print ("handling labellist",instruction.label)
@@ -173,7 +174,8 @@ def encode(input_list):
 	for index,instruction in enumerate(word_instruction_list):
 		if (instruction.type=='text'):
 			print ("======now ins======"+ instruction.content)
-			instruction.code=single_encode(instruction.content,label_list,index)
+			print (index)
+			instruction.code=single_encode(instruction.content,label_list,instruction.index)
 	# result_file=file('code.txt','w')
 	result_file=open('code.txt','w')
 	now_loc=0
@@ -191,6 +193,7 @@ def encode(input_list):
 		# pass
 		# if (instruction.type=='text'):
 		print (instruction.content)
+		print (now_loc)
 		# result_file.write(instruction.code+'\n')
 		# print (instruction.code,file=result_file)
 		loc_ins[now_loc]=instruction.code;
