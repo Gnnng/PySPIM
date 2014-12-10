@@ -76,7 +76,7 @@ class Cpu(object):
             'cause': 13,
             'epc': 14
         }
-        self.int_all_address = 4
+        self.int_all_address = 0x80
         self.int_vector_table = 0x100
         self.set_int_enable()
         self.alive = False
@@ -99,8 +99,8 @@ class Cpu(object):
         
 
     def peek(self):
-        print('Instruction', self.instruction)
-        print('PC', self.pc)
+        print('Instruction', hex(int(self.instruction)))
+        print('PC', hex(int(self.pc)))
         # print('Flags', self.zero, self.carry, self.overflow)
         print('Regs', self.reg_file)
 
@@ -165,8 +165,12 @@ class Cpu(object):
                 self.reg_file[rd], self.zero, self.carry, self.overflow = \
                     alu_calc(alu_op, op1, op2)
                 pc = pc + 4
-            elif func == 0b001000:  # jump
+            elif func == 0b001000:  # jump reg
                 pc = self.reg_file[rs]
+            elif func == 0b001001:  # jump reg and link
+                self.reg_file[rd] = pc + 4
+                pc = self.reg_file[rs]
+
 
         else:
             alu_op = aop.convert_opcode(opcode)
@@ -252,7 +256,7 @@ class Bus(object):
 
 class Ram(object):
     def __init__(self, init_data):
-        self.memory = [0] * 1024
+        self.memory = [0] * 0x10000
         for x in range(0, len(init_data)):
             self.memory[x] = init_data[x]
 
@@ -265,8 +269,8 @@ class Ram(object):
         self.memory[address >> 2] = data
 
     def peek(self, start = 0, len = 10):
-        print("Ram ", self.memory[start << 2: (start + len) << 2])
-
+        for i in range(start, start + len):
+            print("Ram ", hex(i << 2), hex(int(self.memory[i << 2])))
 class VideoRam(object):
     def __init__(self):
         self.memory = [0] * (2**19)
@@ -323,7 +327,7 @@ class VirtualMachine(object):
 
     def peek(self):
         self.cpu.peek()
-        self.ram.peek()
+        #self.ram.peek()
 
     def reset(self):
         pass
