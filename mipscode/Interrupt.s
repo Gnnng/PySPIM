@@ -87,6 +87,7 @@ INT08_PRINT_STRING:
 	add	$t0, $a0, $zero
 PRINT_STRING_LOOP:
 	lw	$a0, 0($t0) #a0 ascii, t0 address
+	srl	$a0, $a0, 24
 	beq	$a0, $zero, PRINT_STRING_END_LOOP
 	jal	INT08_PRINT_CHAR
 	addi	$t0, $t0, 1
