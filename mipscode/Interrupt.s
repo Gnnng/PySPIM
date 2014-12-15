@@ -205,9 +205,9 @@ Load_Byte:
 	sw	$t0, 8($sp)
 	sw	$t1, 12($sp)
 	#$t0 is the relative offset
-	srl	$t0, $a0, 2
-	sll	$t0, $t0, 2
-	sub	$t0, $a0, $t0
+	andi	$t0, $a0, 3
+	addi	$t0, $t0, -3
+	sub	$t0, $zero, $t0
 	#$t1 saves the word
 	lw	$t1, 0($a0)
 Load_Byte_Loop:
