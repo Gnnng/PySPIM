@@ -10,6 +10,7 @@ class UserInstruction:
 			self.content=None
 			self.code=None
 			self.type=None
+			self.index=None
 		else:
 			self.code=None
 			self.label=None

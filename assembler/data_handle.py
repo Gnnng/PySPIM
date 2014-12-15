@@ -1,7 +1,7 @@
 from initial import get_code
 import struct
 def initdata(instruction):
-	temp=''
+	# temp=''
 	data_type=instruction.split()[0]
 	data_content=""
 	data_content=data_content.join(instruction.split()[1:])
@@ -14,7 +14,9 @@ def initdata(instruction):
 		for char in temp:
 			new_data+=[get_code(ord(char),8)]
 	if (data_type=='.asciiz'):
-		exec('temp='+data_content)
+		# exec('temp='+data_content)
+		temp=data_content.split('"')[1]
+		print("asciiz temp",data_content,temp);
 		for char in temp:
 			new_data+=[get_code(ord(char),8)]
 		new_data+=['00000000']

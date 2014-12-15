@@ -155,6 +155,7 @@ def encode(input_list):
 			# data_set+=newdatas
 			# max_address+=len(newdatas)			
 		if (instruction.type=='text'):
+			instruction.index=index+now_begin//4
 			word_instruction_list+=[instruction]
 			if (instruction.label):
 				print ("handling labellist",instruction.label)
@@ -173,12 +174,14 @@ def encode(input_list):
 	for index,instruction in enumerate(word_instruction_list):
 		if (instruction.type=='text'):
 			print ("======now ins======"+ instruction.content)
-			instruction.code=single_encode(instruction.content,label_list,index)
+			print (index)
+			instruction.code=single_encode(instruction.content,label_list,instruction.index)
 	# result_file=file('code.txt','w')
 	result_file=open('code.txt','w')
 	now_loc=0
 	loc_ins={}
 	max_loc=0
+	source_code = {}
 	for instruction in word_instruction_list:
 		if (instruction.type=="location"):
 			print("loc!")
@@ -191,9 +194,17 @@ def encode(input_list):
 		# pass
 		# if (instruction.type=='text'):
 		print (instruction.content)
+		print (now_loc)
 		# result_file.write(instruction.code+'\n')
 		# print (instruction.code,file=result_file)
 		loc_ins[now_loc]=instruction.code;
+		source_content = ''
+		source_note = ''
+		if instruction.content:
+			source_content = instruction.content
+		if instruction.note:
+			source_note = instruction.note
+		source_code[now_loc]= source_content + " #" + source_note
 		now_loc+=1
 			# print (instruction.code)
 		try:
@@ -205,20 +216,24 @@ def encode(input_list):
 	# print data_set
 	i=0
 	flag=0
+
 	print("maxloc",max_loc)
+	disasm_file = open('disasm.txt', 'w')
 	while True:
 		try:
 			print (loc_ins[i],file=result_file)
+			print (source_code[i], file=disasm_file)
 		except:
 			if (flag==1):
 				break;
 			print ("00000000000000000000000000000000",file=result_file)
+			print ("nop", file=disasm_file)
 		if (i==max_loc):
 			flag=1
 		i+=1
 changeline=0
 print("========program start=======")
-ins_file=open('instruction.txt')
+ins_file=open(sys.argv[1])
 # ins_file=open('test_error.s')
 input_list=[]
 global special_syscall
