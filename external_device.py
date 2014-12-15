@@ -171,7 +171,7 @@ class ExternalDevice(threading.Thread):
         return device.read(address)
         
     def write(self, address, data):
-        device = self.select_device(address)
+        device = self.address_map(address)
         device.write(address, data)
 
     def run(self):
