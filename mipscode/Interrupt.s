@@ -23,29 +23,29 @@ INT_HANDLER:
 	#$12: Status, $13: Cause, $14: EPC
 	#push $ra
 	addi	$sp, $sp, -4
-	sw		$ra, 0($sp)
+	sw	$ra, 0($sp)
 	#Status 2~6 bit represents interrupt value
 	mfc0	$k0, $13 #$12: Status
 	andi	$k0, $k0, 0x007C #2~6 bits
 	addi	$k0, $k0, 0x0100 #jump to interrupt
-	lw		$k0, 0($k0)	 #get the address
+	lw	$k0, 0($k0)	 #get the address
 	jalr	$k0, $ra
-	lw 		$ra, 0($sp)
+	lw 	$ra, 0($sp)
 	addi 	$sp, $sp, 4
 	eret
 .data 0x00000100
 #interrupt vector table
 #init 0, everytime the program runs, load it
 	int00:	.word	0 #all external interrupt
-			.word 	0
-			.word 	0
-			.word 	0
-			.word 	0
-			.word 	0
-			.word 	0
-			.word 	0
+		.word 	0
+		.word 	0
+		.word 	0
+		.word 	0
+		.word 	0
+		.word 	0
+		.word 	0
 	int08:	.word	0 #syscall
-			.word 	0
+		.word 	0
 .text 0x00000200
 #interrupt services
 INT_SERVICES:
@@ -91,6 +91,7 @@ PRINT_STRING_LOOP:
 	beq	$a0, $zero, PRINT_STRING_END_LOOP
 	jal	INT08_PRINT_CHAR
 	addi	$t0, $t0, 1
+	j	PRINT_STRING_LOOP
 PRINT_STRING_END_LOOP:
 	#pop $ra, $v0, $a0, $t0
 	lw	$ra, 0($sp)
@@ -194,7 +195,7 @@ INT08_PRINT_CHAR_END:
 #Kernel initialization begin
 KERNEL_INIT:
 	la	$a0, hi
-	li  $v0, 4
+	li	$v0, 4
 	syscall
 DEAD_LOOP:
-	j   DEAD_LOOP
+	j	DEAD_LOOP
