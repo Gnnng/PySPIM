@@ -1,0 +1,1030 @@
+lui $sp,0b0000000000000000 #
+ori $sp,$sp,0b1111111111111100 #
+lahi $t0,int00[high] #
+lalo $t0,$t0,int00[low] #
+lahi $t1,INT00_SERVICE[high] #
+lalo $t1,$t1,INT00_SERVICE[low] #
+sw	$t1, 0($t0) #
+lahi $t0,int08[high] #
+lalo $t0,$t0,int08[low] #
+lahi $t1,INT08_SERVICE[high] #
+lalo $t1,$t1,INT08_SERVICE[low] #
+sw	$t1, 0($t0) #
+j	KERNEL_INIT #
+nop
+nop
+nop
+nop
+nop
+nop
+nop
+nop
+nop
+nop
+nop
+nop
+nop
+nop
+nop
+nop
+nop
+nop
+nop
+addi	$sp, $sp, -4 #
+sw		$ra, 0($sp) #
+mfc0	$k0, $13 #$12: Status
+andi	$k0, $k0, 0x007C #2~6 bits
+addi	$k0, $k0, 0x0100 #jump to interrupt
+lw		$k0, 0($k0) #get the address
+jalr	$k0, $ra #
+lw 		$ra, 0($sp) #
+addi 	$sp, $sp, 4 #
+eret #
+nop
+nop
+nop
+nop
+nop
+nop
+nop
+nop
+nop
+nop
+nop
+nop
+nop
+nop
+nop
+nop
+nop
+nop
+nop
+nop
+nop
+nop
+ #
+ #
+ #
+ #
+ #
+ #
+ #
+ #
+ #
+ #
+nop
+nop
+nop
+nop
+nop
+nop
+nop
+nop
+nop
+nop
+nop
+nop
+nop
+nop
+nop
+nop
+nop
+nop
+nop
+nop
+nop
+nop
+nop
+nop
+nop
+nop
+nop
+nop
+nop
+nop
+nop
+nop
+nop
+nop
+nop
+nop
+nop
+nop
+nop
+nop
+nop
+nop
+nop
+nop
+nop
+nop
+nop
+nop
+nop
+nop
+nop
+nop
+nop
+nop
+addi	$sp, $sp, -16 #
+sw	$ra, 0($sp) #
+sw	$v0, 4($sp) #
+sw	$a0, 8($sp) #
+sw	$t0, 12($sp) #
+addi	$t0, $zero, 4 #
+beq	$v0, $t0, INT08_PRINT_STRING #
+addi	$t0, $zero, 11 #
+beq	$v0, $t0, INT08_PRINT_CHAR #
+lw	$ra, 0($sp) #
+lw	$v0, 4($sp) #
+lw	$a0, 8($sp) #
+lw	$t0, 12($sp) #
+addi	$sp, $sp, 16 #
+jr	$ra #
+addi	$sp, $sp, -28 #
+sw	$ra, 0($sp) #
+sw	$v0, 4($sp) #
+sw	$a0, 8($sp) #
+sw	$t0, 12($sp) #
+sw	$a1, 16($sp) #
+sw	$a2, 20($sp) #
+sw	$t1, 24($sp) #
+add	$t0, $a0, $zero #
+lw	$a0, 0($t0) #a0 ascii, t0 address
+srl	$a0, $a0, 24 #
+beq	$a0, $zero, PRINT_STRING_END_LOOP #
+jal	INT08_PRINT_CHAR #
+addi	$t0, $t0, 1 #
+lw	$ra, 0($sp) #
+lw	$v0, 4($sp) #
+lw	$a0, 8($sp) #
+lw	$t0, 12($sp) #
+lw	$a1, 16($sp) #
+lw	$a2, 20($sp) #
+lw	$t1, 24($sp) #
+addi	$sp, $sp, 28 #
+jr	$ra #
+addi	$sp, $sp, -12 #
+sw	$t0, 0($sp) #
+sw	$a0, 4($sp) #
+sw 	$t1, 8($sp) #
+sll	$a0, $a0, 3 #
+add	$t0, $zero, $a2 #
+sll	$t0, $t0, 7 #
+add	$t0, $t0, $a1 #
+sll	$t0, $t0, 2 #
+lui $t1, 0x1000 #
+or  $t0, $t0, $t1 #
+sw	$a0, 0($t0) #
+lw	$t0, 0($sp) #
+lw	$a0, 4($sp) #
+lw 	$t1, 8($sp) #
+addi	$sp, $sp, 12 #
+jr	$ra #
+addi	$sp, $sp, -28 #
+sw	$ra, 0($sp) #
+sw	$v0, 4($sp) #
+sw	$a0, 8($sp) #
+sw	$a1, 12($sp) #
+sw	$a2, 16($sp) #
+sw	$t0, 20($sp) #
+sw	$t1, 24($sp) #
+lui	$t0, 0xffff #
+lw	$a1, 0($t0) #X
+lw	$a2, 4($t0) #Y
+addi	$t1, $zero, 13 #
+bne	$a0, $t1, INT08_PRINT_CHAR_EXEC #
+add	$a1, $zero, $zero #
+addi	$a2, $a2, 1 #
+j	INT08_PRINT_CHAR_END #
+jal	SHOW_CHAR #
+addi	$a1, $a1, 1 #
+lahi $t1,WEIGHT[high] #
+lalo $t1,$t1,WEIGHT[low] #
+lw	$t1, 0($t1) #
+bne	$a1, $t1, INT08_PRINT_CHAR_END #
+add	$a1, $zero, $zero #
+addi	$a2, $a2, 1 #
+sw	$a1, 0($t0) #
+sw	$a2, 4($t0) #
+lw	$ra, 0($sp) #
+lw	$v0, 4($sp) #
+lw	$a0, 8($sp) #
+lw	$a1, 12($sp) #
+lw	$a2, 16($sp) #
+lw	$t0, 20($sp) #
+lw	$t1, 24($sp) #
+addi	$sp, $sp, 28 #
+jr	$ra #
+nop
+nop
+nop
+nop
+nop
+nop
+nop
+nop
+nop
+nop
+nop
+nop
+nop
+nop
+nop
+nop
+nop
+nop
+nop
+nop
+nop
+nop
+nop
+nop
+nop
+nop
+nop
+nop
+nop
+nop
+nop
+nop
+nop
+nop
+nop
+nop
+nop
+nop
+nop
+nop
+nop
+nop
+nop
+nop
+nop
+nop
+nop
+nop
+nop
+nop
+nop
+nop
+nop
+nop
+nop
+nop
+nop
+nop
+nop
+nop
+nop
+nop
+nop
+nop
+nop
+nop
+nop
+nop
+nop
+nop
+nop
+nop
+nop
+nop
+nop
+nop
+nop
+nop
+nop
+nop
+nop
+nop
+nop
+nop
+nop
+nop
+nop
+nop
+nop
+nop
+nop
+nop
+nop
+nop
+nop
+nop
+nop
+nop
+nop
+nop
+nop
+nop
+nop
+nop
+nop
+nop
+nop
+nop
+nop
+nop
+nop
+nop
+nop
+nop
+nop
+nop
+nop
+nop
+nop
+nop
+nop
+nop
+nop
+nop
+nop
+nop
+nop
+nop
+nop
+nop
+nop
+nop
+nop
+nop
+nop
+nop
+nop
+nop
+nop
+nop
+nop
+nop
+nop
+nop
+nop
+nop
+nop
+nop
+nop
+nop
+nop
+nop
+nop
+nop
+nop
+nop
+nop
+nop
+nop
+nop
+nop
+nop
+nop
+nop
+nop
+nop
+nop
+nop
+nop
+nop
+nop
+nop
+nop
+nop
+nop
+nop
+nop
+nop
+nop
+nop
+nop
+nop
+nop
+nop
+nop
+nop
+nop
+nop
+nop
+nop
+nop
+nop
+nop
+nop
+nop
+nop
+nop
+nop
+nop
+nop
+nop
+nop
+nop
+nop
+nop
+nop
+nop
+nop
+nop
+nop
+nop
+nop
+nop
+nop
+nop
+nop
+nop
+nop
+nop
+nop
+nop
+nop
+nop
+nop
+nop
+nop
+nop
+nop
+nop
+nop
+nop
+nop
+nop
+nop
+nop
+nop
+nop
+nop
+nop
+nop
+nop
+nop
+nop
+nop
+nop
+nop
+nop
+nop
+nop
+nop
+nop
+nop
+nop
+nop
+nop
+nop
+nop
+nop
+nop
+nop
+nop
+nop
+nop
+nop
+nop
+nop
+nop
+nop
+nop
+nop
+nop
+nop
+nop
+nop
+nop
+nop
+nop
+nop
+nop
+nop
+nop
+nop
+nop
+nop
+nop
+nop
+nop
+nop
+nop
+nop
+nop
+nop
+nop
+nop
+nop
+nop
+nop
+nop
+nop
+nop
+nop
+nop
+nop
+nop
+nop
+nop
+nop
+nop
+nop
+nop
+nop
+nop
+nop
+nop
+nop
+nop
+nop
+nop
+nop
+nop
+nop
+nop
+nop
+nop
+nop
+nop
+nop
+nop
+nop
+nop
+nop
+nop
+nop
+nop
+nop
+nop
+nop
+nop
+nop
+nop
+nop
+nop
+nop
+nop
+nop
+nop
+nop
+nop
+nop
+nop
+nop
+nop
+nop
+nop
+nop
+nop
+nop
+nop
+ #
+ #
+ #
+ #
+ #
+nop
+nop
+nop
+nop
+nop
+nop
+nop
+nop
+nop
+nop
+nop
+nop
+nop
+nop
+nop
+nop
+nop
+nop
+nop
+nop
+nop
+nop
+nop
+nop
+nop
+nop
+nop
+nop
+nop
+nop
+nop
+nop
+nop
+nop
+nop
+nop
+nop
+nop
+nop
+nop
+nop
+nop
+nop
+nop
+nop
+nop
+nop
+nop
+nop
+nop
+nop
+nop
+nop
+nop
+nop
+nop
+nop
+nop
+nop
+nop
+nop
+nop
+nop
+nop
+nop
+nop
+nop
+nop
+nop
+nop
+nop
+nop
+nop
+nop
+nop
+nop
+nop
+nop
+nop
+nop
+nop
+nop
+nop
+nop
+nop
+nop
+nop
+nop
+nop
+nop
+nop
+nop
+nop
+nop
+nop
+nop
+nop
+nop
+nop
+nop
+nop
+nop
+nop
+nop
+nop
+nop
+nop
+nop
+nop
+nop
+nop
+nop
+nop
+nop
+nop
+nop
+nop
+nop
+nop
+nop
+nop
+nop
+nop
+nop
+nop
+nop
+nop
+nop
+nop
+nop
+nop
+nop
+nop
+nop
+nop
+nop
+nop
+nop
+nop
+nop
+nop
+nop
+nop
+nop
+nop
+nop
+nop
+nop
+nop
+nop
+nop
+nop
+nop
+nop
+nop
+nop
+nop
+nop
+nop
+nop
+nop
+nop
+nop
+nop
+nop
+nop
+nop
+nop
+nop
+nop
+nop
+nop
+nop
+nop
+nop
+nop
+nop
+nop
+nop
+nop
+nop
+nop
+nop
+nop
+nop
+nop
+nop
+nop
+nop
+nop
+nop
+nop
+nop
+nop
+nop
+nop
+nop
+nop
+nop
+nop
+nop
+nop
+nop
+nop
+nop
+nop
+nop
+nop
+nop
+nop
+nop
+nop
+nop
+nop
+nop
+nop
+nop
+nop
+nop
+nop
+nop
+nop
+nop
+nop
+nop
+nop
+nop
+nop
+nop
+nop
+nop
+nop
+nop
+nop
+nop
+nop
+nop
+nop
+nop
+nop
+nop
+nop
+nop
+nop
+nop
+nop
+nop
+nop
+nop
+nop
+nop
+nop
+nop
+nop
+nop
+nop
+nop
+nop
+nop
+nop
+nop
+nop
+nop
+nop
+nop
+nop
+nop
+nop
+nop
+nop
+nop
+nop
+nop
+nop
+nop
+nop
+nop
+nop
+nop
+nop
+nop
+nop
+nop
+nop
+nop
+nop
+nop
+nop
+nop
+nop
+nop
+nop
+nop
+nop
+nop
+nop
+nop
+nop
+nop
+nop
+nop
+nop
+nop
+nop
+nop
+nop
+nop
+nop
+nop
+nop
+nop
+nop
+nop
+nop
+nop
+nop
+nop
+nop
+nop
+nop
+nop
+nop
+nop
+nop
+nop
+nop
+nop
+nop
+nop
+nop
+nop
+nop
+nop
+nop
+nop
+nop
+nop
+nop
+nop
+nop
+nop
+nop
+nop
+nop
+nop
+nop
+nop
+nop
+nop
+nop
+nop
+nop
+nop
+nop
+nop
+nop
+nop
+nop
+nop
+nop
+nop
+nop
+nop
+nop
+nop
+nop
+nop
+nop
+nop
+nop
+nop
+nop
+nop
+nop
+nop
+nop
+nop
+nop
+nop
+nop
+nop
+nop
+nop
+nop
+nop
+nop
+nop
+nop
+nop
+nop
+nop
+nop
+nop
+nop
+nop
+nop
+nop
+nop
+nop
+nop
+nop
+nop
+nop
+nop
+nop
+nop
+nop
+nop
+nop
+nop
+nop
+nop
+nop
+nop
+nop
+nop
+nop
+nop
+nop
+nop
+nop
+nop
+nop
+nop
+nop
+nop
+nop
+nop
+nop
+nop
+nop
+nop
+nop
+nop
+nop
+nop
+nop
+nop
+nop
+nop
+nop
+nop
+nop
+lahi $a0,hi[high] #
+lalo $a0,$a0,hi[low] #
+lui $v0,0b0000000000000000 #
+ori $v0,$v0,0b0000000000000100 #
+syscall #
+j   DEAD_LOOP #

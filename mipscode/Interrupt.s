@@ -112,7 +112,6 @@ SHOW_CHAR:
 	sw 	$t1, 8($sp)
 	sll	$a0, $a0, 3
 	#offset
-	
 	add	$t0, $zero, $a2
 	sll	$t0, $t0, 7
 	add	$t0, $t0, $a1
@@ -120,7 +119,6 @@ SHOW_CHAR:
 	lui $t1, 0x1000 
 	or  $t0, $t0, $t1
 	#save word
-
 	sw	$a0, 0($t0)
 	#pop $t0, $a0
 	lw	$t0, 0($sp)
@@ -142,7 +140,7 @@ INT08_PRINT_CHAR:
 	#a0 ascii, a1 X, a2 Y
 	#Cursor X, Y
 	lui	$t0, 0xffff
-	ori	$t0, $t0, 0x0000
+	#ori	$t0, $t0, 0x0000
 	lw	$a1, 0($t0) #X
 	lw	$a2, 4($t0) #Y
 	#if a0 = enter
@@ -185,7 +183,7 @@ INT08_PRINT_CHAR_END:
 #	HEIGHT	.word
 #	CursorX	.word
 #	CursorY	.word
-.data
+.data 0x00000900
 	WEIGHT:	.word	40
 	HEIGHT:	.word	25
 	hi:	.asciiz	"hello world!"
