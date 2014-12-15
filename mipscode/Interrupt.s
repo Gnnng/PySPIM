@@ -75,33 +75,30 @@ INT08_SERVICE:
 INT08_PRINT_STRING:
 	#syscall print string
 	#push $ra, $v0, $a0, $t0, $a1, $a2, $t1
-	addi	$sp, $sp, -28
+	addi	$sp, $sp, -16
 	sw	$ra, 0($sp)
 	sw	$v0, 4($sp)
 	sw	$a0, 8($sp)
-	sw	$t0, 12($sp)
-	sw	$a1, 16($sp)
-	sw	$a2, 20($sp)
-	sw	$t1, 24($sp)
-	#$t0 = $a0
-	add	$t0, $a0, $zero
+	sw	$a1, 12($sp)
+	#mov, $a1, $a0
+	add	$a1, $a0, $zero
 PRINT_STRING_LOOP:
-	lw	$a0, 0($t0) #a0 ascii, t0 address
-	srl	$a0, $a0, 24
+	#here add load byte
+	#$v0 is saving place, $a1 is address
+	jal	Load_Byte
+	add	$a0, $v0, $zero
+	#load byte end
 	beq	$a0, $zero, PRINT_STRING_END_LOOP
 	jal	INT08_PRINT_CHAR
-	addi	$t0, $t0, 1
+	addi	$a1, $a1, 1
 	j	PRINT_STRING_LOOP
 PRINT_STRING_END_LOOP:
 	#pop $ra, $v0, $a0, $t0
 	lw	$ra, 0($sp)
 	lw	$v0, 4($sp)
 	lw	$a0, 8($sp)
-	lw	$t0, 12($sp)
-	lw	$a1, 16($sp)
-	lw	$a2, 20($sp)
-	lw	$t1, 24($sp)
-	addi	$sp, $sp, 28
+	lw	$a1, 12($sp)
+	addi	$sp, $sp, 16
 	#return
 	jr	$ra
 SHOW_CHAR:
@@ -143,7 +140,6 @@ INT08_PRINT_CHAR:
 	#a0 ascii, a1 X, a2 Y
 	#Cursor X, Y
 	lui	$t0, 0xffff
-	#ori	$t0, $t0, 0x0000
 	lw	$a1, 0($t0) #X
 	lw	$a2, 4($t0) #Y
 	#if a0 = enter
@@ -199,3 +195,33 @@ KERNEL_INIT:
 	syscall
 DEAD_LOOP:
 	j	DEAD_LOOP
+#========global functions========#
+Load_Byte:
+	#push $ra, $a0, $a1, $t0, $t1
+	addi	$sp, $sp,
+	sw	$ra, 0($sp)
+	sw	$a0, 4($sp)
+	sw	$a1, 8($sp)
+	sw	$t0, 12($sp)
+	sw	$t1, 16($sp)
+	#$t0 is the relative offset
+	srl	$t0, $a0, 2
+	sll	$t0, $t0, 2
+	sub	$t0, $a0, $t0
+	#$t1 saves the word
+	lw	$t1, 0($a0)
+Load_Byte_Loop:
+	beq	$t0, $zero, Load_Byte_End
+	srl	$t1, $t1, 8
+	addi	$t0, $t0, -1
+	j	Load_Byte_Loop
+Load_Byte_End:
+	#return in $v0
+	andi	$v0, $t1, 0xff
+	lw	$ra, 0($sp)
+	lw	$a0, 4($sp)
+	lw	$a1, 8($sp)
+	lw	$t0, 12($sp)
+	lw	$t1, 16($sp)
+	addi	$sp, $sp, 20
+	jr	$ra
