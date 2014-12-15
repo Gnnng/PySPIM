@@ -198,7 +198,7 @@ class Cpu(object):
                 else:
                     pc = pc + 4
             elif opcode == 0b001111:
-                self.reg_file[rt] = imme << 16
+                self.reg_file[rt] = (imme << 16) & 0xffffffff
                 pc = pc + 4
             elif opcode == 0b000010:
                 pc = ((pc + 4) & 0xf0000000) | ((addr << 2) & 0x0fffffff)
