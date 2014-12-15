@@ -7,6 +7,11 @@ SCREEN_WIDTH = 640
 SCREEN_HEIGHT = 480
 VRAM_ADDRESS = 0x10000000
 
+def full_hex(x):
+    assert isinstance(x, int), "Not a int type"
+    h = hex(x)
+    return '0'*(8 - (len(h) - 2)) + h[2:]
+
 class KeyBoard(threading.Thread):
     def __init__(self, cpu):
         super(KeyBoard, self).__init__()
@@ -76,6 +81,7 @@ class VideoGraphArray(threading.Thread):
             self.mode = data
 
     def read(self, address):
+        print("VGA read at ", full_hex(address))
         select = address & 0xff
         data = 0
         if select == 0:
@@ -86,6 +92,7 @@ class VideoGraphArray(threading.Thread):
             data = self.cursor_switch
         elif select == 3:
             data = self.mode
+        return data
 
     def run(self):
         self.running = True
@@ -149,8 +156,8 @@ class ExternalDevice(threading.Thread):
 
     def address_map(self, address):
         device = None
-        print('address is', address)
-        address = (address & 0xffff) >> 8
+        print('External IO at address: ', full_hex(address))
+        address = (address >> 8) & 0xff
         if address == 0:
             device = self.vga
         elif address == 1:
@@ -165,7 +172,7 @@ class ExternalDevice(threading.Thread):
         
     def write(self, address, data):
         device = self.select_device(address)
-        return device.write(address, data)
+        device.write(address, data)
 
     def run(self):
         self.running = True
