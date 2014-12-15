@@ -249,8 +249,8 @@ class Cpu(object):
             elif opcode == 0b000010:
                 pc = ((pc + 4) & 0xf0000000) | ((addr << 2) & 0x0fffffff)
             elif opcode == 0b000011:
+                self.reg_file[31] = pc + 8
                 pc = ((pc + 4) & 0xf0000000) | ((addr << 2) & 0x0fffffff)
-                self.reg_file[31] = pc + 4
             elif opcode == 0x10: # mfc0/mtc0/eret
                 if rs == 0: # mfc0
                     self.reg_file[rt] = self.cp0_reg_file[rd]
