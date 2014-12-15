@@ -1,2 +1,10 @@
 __pycache__
 .DS_Store
+disasm.txt
+assembler/code.txt
+assembler
+mipscode
+machinecode
+test*.py
+tes.txt
+asyncDemo.py

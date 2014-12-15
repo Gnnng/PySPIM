@@ -114,8 +114,10 @@ class Tinstruction:
 				try:
 					label=match_result.group('label')
 					print ('label:',label)
+
 					try:
 						label_location=label_list[label]
+						print(label_location, index)
 						offset=label_location-index-1
 						# offset_code=bin(offset)[2:]
 						# print(offset_code)
