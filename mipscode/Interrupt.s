@@ -106,10 +106,11 @@ PRINT_STRING_END_LOOP:
 SHOW_CHAR:
 	#a0 ascii, a1 X, a2 Y
 	#push $t0, $a0
-	addi	$sp, $sp, -12
+	addi	$sp, $sp, -16
 	sw	$t0, 0($sp)
 	sw	$a0, 4($sp)
 	sw 	$t1, 8($sp)
+	sw 	$ra, 12($sp)
 	sll	$a0, $a0, 3
 	#offset
 	add	$t0, $zero, $a2
@@ -124,7 +125,8 @@ SHOW_CHAR:
 	lw	$t0, 0($sp)
 	lw	$a0, 4($sp)
 	lw 	$t1, 8($sp)
-	addi	$sp, $sp, 12
+	lw 	$ra, 12($sp)
+	addi	$sp, $sp, 16
 	#return
 	jr	$ra
 INT08_PRINT_CHAR:
