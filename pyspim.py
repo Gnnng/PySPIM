@@ -61,6 +61,7 @@ def alu_calc(operation, op1, op2):
     return (result, result == 0, carry, overflow)
 
 def full_hex(x):
+    assert isinstance(x, int), "Not a int type"
     h = hex(x)
     return '0'*(8 - (len(h) - 2)) + h[2:]
 
@@ -148,6 +149,11 @@ class Cpu(object):
         while True:
             self.step()
 
+    def regCheck(self):
+        for i in range(32):
+            assert isinstance(self.reg_file[i], int), "Wrong type to write into a register"
+            assert isinstance(self.cp0_reg_file[i], int), "Wrong type to write into a cp0 register"
+
     def step(self):
         """run one instruction at one time"""
         self.alive = True
@@ -175,7 +181,7 @@ class Cpu(object):
                 self.set_excode(0)      
                 self.epc = pc;
                 pc = self.int_all_address
-                print('pc in int', pc)
+                # print('pc in int', pc)
             elif opcode == 0 and func == 0xc: # syscall
                 self.set_int_level(True)
                 self.int_hit = True
@@ -253,13 +259,14 @@ class Cpu(object):
                     self.cp0_reg_file[rd] = self.reg_file[rt]
                     pc = pc + 4
                 elif rs == 16 and func == 0x18: # eret
-                    print("return from int", self.epc)
+                    # print("Return from interrupt", self.epc)
                     self.set_int_level(False) # exiting interrupt
                     pc = self.epc
 
 
         self.pc = pc
         self.reg_file[0] = 0
+        self.regCheck()
         self.alive = False
 
 class Bus(object):
@@ -287,6 +294,7 @@ class Bus(object):
         return device.read(logic_address)
 
     def write(self, logic_address, data):
+        assert isinstance(data, int), "Not a int type to write: " + str(data);
         device = self.address_map(logic_address)
         device.write(logic_address, data)
 
@@ -357,7 +365,7 @@ class VideoRam(object):
         return self.memory[address >> 2]
 
     def write(self, address, data):
-        print('vram write at', address)
+        print('Writae vram at', full_hex(address))
         address &= 0x1fffff
         self.memory[address >> 2] = data
 
@@ -448,8 +456,8 @@ def main():
                 for i in range(10000):
                     vm.step()
                     if vm.cpu.old_pc == eval(n):
-                        break
                         flag = True
+                        break
                 if not flag:
                     raise Exception('Dead loop in execution of "' + input_str + '"')
             elif input_str.startswith('m') or input_str.startswith('memory'):
