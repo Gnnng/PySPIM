@@ -207,6 +207,17 @@ class Cpu(object):
                 self.reg_file[rd], self.zero, self.carry, self.overflow = \
                     alu_calc(alu_op, op1, op2)
                 pc = pc + 4
+            elif func in [0b000100, 0b000110, 0b000111]: # [sllv, srlv, srav]
+                op1 = self.reg_file[rt]
+                op2 = self.reg_file[rs]
+                shift_by_reg_map = {
+                    0b000100: aop.SLL,
+                    0b000110: aop.SRL,
+                    0b000111: aop.SRA
+                }
+                self.reg_file[rd], self.zero, self.carry, self.overflow = \
+                    alu_calc(shift_by_reg_map[func], op1, op2)
+                pc = pc + 4
             elif func == 0b001000:  # jump reg
                 pc = self.reg_file[rs]
             elif func == 0b001001:  # jump reg and link
