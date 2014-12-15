@@ -198,7 +198,7 @@ DEAD_LOOP:
 #========global functions========#
 Load_Byte:
 	#push $ra, $a0, $a1, $t0, $t1
-	addi	$sp, $sp,
+	addi	$sp, $sp, -20
 	sw	$ra, 0($sp)
 	sw	$a0, 4($sp)
 	sw	$a1, 8($sp)
