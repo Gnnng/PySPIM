@@ -9,7 +9,7 @@ VRAM_ADDRESS = 0x10000000
 
 def full_hex(x):
     assert isinstance(x, int), "Not a int type"
-    h = hex(x)
+    h = hex((x) & 0xffffffff)
     return '0'*(8 - (len(h) - 2)) + h[2:]
 
 class KeyBoard(threading.Thread):

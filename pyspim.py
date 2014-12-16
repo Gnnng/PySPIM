@@ -21,7 +21,8 @@ def alu_calc(operation, op1, op2):
         result = sop1 + sop2
         overflow = (sop1 > 0 and sop2 > 0 and result > 0x7fffffff) or \
             (sop1 < 0 and sop2 < 0 and result < -1 * 2**31)
-        result = signed_32(result & 0xffffffff)
+        # result = signed_32(result & 0xffffffff)
+        result = result & 0xffffffff
     if operation == aop.SUB:
         sop1 = signed_32(op1)
         sop2 = signed_32(op2)
@@ -30,23 +31,24 @@ def alu_calc(operation, op1, op2):
         result = sop1 - sop2
         overflow = (sop1 > 0 and sop2 < 0 and result > 0x7fffffff) or \
             (sop1 < 0 and sop2 > 0 and result < -1 * 2**31)
-        result = signed_32(result & 0xffffffff)
+        # result = signed_32(result & 0xffffffff)
     if operation == aop.SLT:
         if signed_32(op1) < signed_32(op2):
             result = 1
         else:
             result = 0
     if operation == aop.XOR:
-        result = (op1 ^ op2) & 0xffffffff
+        result = (op1 ^ op2)
     if operation == aop.SLL:
-        result = (op1 << op2) & 0xffffffff
+        result = (op1 << op2)
     if operation == aop.SRL:
-        result = (op1 >> op2) & 0xffffffff
+        print('SRL operation', op1)
+        result = (op1 >> op2)
     if operation == aop.SRA:
         sop1 = signed_32(op1)
-        result = (sop1 >> op2) & 0xffffffff
+        result = (sop1 >> op2)
     if operation == aop.NOR:
-        result = (~(op1 | op2)) & 0xffffffff
+        result = (~(op1 | op2))
     if operation == aop.ADDU:
         result = op1 + op2
         carry = result > 2**32
@@ -58,11 +60,12 @@ def alu_calc(operation, op1, op2):
             result = 1
         else:
             result = 0
+    result = result & 0xffffffff
     return (result, result == 0, carry, overflow)
 
 def full_hex(x):
     assert isinstance(x, int), "Not a int type"
-    h = hex(x)
+    h = hex((x) & 0xffffffff)
     return '0'*(8 - (len(h) - 2)) + h[2:]
 
 class Cpu(object):
