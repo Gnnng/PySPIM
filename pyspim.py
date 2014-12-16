@@ -379,7 +379,7 @@ class VideoRam(object):
         return self.memory[address >> 2]
 
     def write(self, address, data):
-        print('Writae vram at', full_hex(address))
+        print('Write vram at', full_hex(address))
         address &= 0x1fffff
         self.memory[address >> 2] = data
 
