@@ -4,11 +4,14 @@ def initdata(instruction):
 	# temp=''
 	data_type=instruction.split()[0]
 	data_content=""
-	if (data_type!='ascii' and data_content!='asciiz'):
+	if (data_type!='.ascii' and data_type!='.asciiz'):
 		data_content=data_content.join(instruction.split()[1:])
+	else:
+		data_content=instruction
 	new_data=[]
 	if (data_type=='.ascii'):
 		# data_content
+		print(data_content)
 		temp=data_content.split('"')[1]
 		# exec('temp='+data_content)
 		# print (temp)
