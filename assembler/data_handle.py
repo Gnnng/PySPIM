@@ -4,12 +4,13 @@ def initdata(instruction):
 	# temp=''
 	data_type=instruction.split()[0]
 	data_content=""
-	data_content=data_content.join(instruction.split()[1:])
+	if (data_type!='ascii' and data_content!='asciiz'):
+		data_content=data_content.join(instruction.split()[1:])
 	new_data=[]
 	if (data_type=='.ascii'):
 		# data_content
-		temp=data_content
-		exec('temp='+data_content)
+		temp=data_content.split('"')[1]
+		# exec('temp='+data_content)
 		# print (temp)
 		for char in temp:
 			new_data+=[get_code(ord(char),8)]
@@ -21,7 +22,7 @@ def initdata(instruction):
 			new_data+=[get_code(ord(char),8)]
 		new_data+=['00000000']
 	if (data_type=='.byte'):
-		exec('temp='+data_content)
+		temp=eval('['+data_content+']')
 		for i in temp:
 			new_data+=[get_code(i,8)]
 	if  (data_type=='.double'):
