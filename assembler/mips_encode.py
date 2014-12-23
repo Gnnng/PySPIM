@@ -210,7 +210,7 @@ def encode(input_list):
 		try:
 			a=instruction.code;
 			a='0b'+a;
-			print(hex(int(a,2)));
+			print(("0"*8+hex(int(a,2))[2:])[-8:]);
 		except:
 			pass
 	# print data_set
