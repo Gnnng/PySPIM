@@ -17,7 +17,7 @@ def initdata(instruction):
 		# print (temp)
 		mode=0
 		for char in temp:
-			if (char == "\\"):
+			if (char == "\\" and mode == 0):
 				mode=1
 			else:
 				if mode==1:
@@ -31,7 +31,7 @@ def initdata(instruction):
 		mode=0
 		print("asciiz temp",data_content,temp);
 		for char in temp:
-			if (char == "\\"):
+			if (char == "\\" and mode == 0):
 				mode=1
 			else:
 				if mode==1:

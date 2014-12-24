@@ -136,7 +136,7 @@ class VideoGraphArray(threading.Thread):
             code = (data >> 3) & 0xff
             if code < ord(' '):
                 code = ord(' ')
-            zi = FontTable[code - ord(' ')]
+            zi = FontTable[code]
             if self.cursor_switch:
                 if blink:
                     px_arr[x, y] = (0, 0, 0)
