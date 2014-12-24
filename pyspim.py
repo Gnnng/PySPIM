@@ -473,7 +473,7 @@ def main():
             elif input_str.startswith('b') or input_str.startswith('break'):
                 n = input_str.strip('break ')
                 flag = False
-                for i in range(10000):
+                for i in range(1000000):
                     vm.step()
                     if vm.cpu.old_pc == eval(n):
                         flag = True

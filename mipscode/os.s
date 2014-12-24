@@ -125,25 +125,27 @@ INT08_PRINT_CHAR:
 	add	$a1, $zero, $zero
 	addi	$a2, $a2, 1
 	#jump to end
-	j	INT08_PRINT_CHAR_END
+	j	INT08_PRINT_CHAR_MOVE_X
 INT08_PRINT_CHAR_EXEC:
 	jal	SHOW_CHAR
 	#X+1
 	addi	$a1, $a1, 1
+INT08_PRINT_CHAR_MOVE_X:
 	#if X=WEIGHT
 	la	$t1, WEIGHT
 	lw	$t1, 0($t1)
-	bne	$a1, $t1, INT08_PRINT_CHAR_END
+	bne	$a1, $t1, INT08_PRINT_CHAR_MOVE_Y
 	add	$a1, $zero, $zero
 	addi	$a2, $a2, 1
+INT08_PRINT_CHAR_MOVE_Y:	
 	#if Full Page(Y = HEIGHT), scroll page
 	la	$t1, HEIGHT
 	lw	$t1, 0($t1)
 	bne	$a2, $t1, INT08_PRINT_CHAR_END
-	#jal	SCROLL_PAGE
-	#last row
-	#addi	$a2, $a2, -1
-INT08_PRINT_CHAR_END:
+	jal	PAGE_SCROLL
+	add	$a1, $zero, $zero
+	addi	$a2, $a2, -1
+INT08_PRINT_CHAR_END:	
 	#save back X, Y
 	sw	$a1, 0($t0)
 	sw	$a2, 4($t0)
@@ -161,7 +163,7 @@ INT08_PRINT_CHAR_END:
 .data 0x00000900
 	WEIGHT:	.word	40
 	HEIGHT:	.word	30
-	hi:	.asciiz	"hello world! hello world! hello world! hello world! hello world! hello world!"
+	hi:	.asciiz	"1\n2\n3\n4\n5\n6\n7\n8\n9\n10\n11\n12\n13\n14\n15\n16\n17\n18\n19\n20\n21\n22\n23\n24\n25\n26\n27\n28\n29\n30\n31"
 .text 0x00001000
 #Kernel initialization begin
 KERNEL_INIT:
@@ -221,7 +223,7 @@ SHOW_CHAR:
 	#return
 	jr	$ra
 GET_VRAM_ADDR:
-	addi	$sp, $sp, -20
+	addi	$sp, $sp, -16
 	#push $ra, $a1, $a2, $t0, $v0
 	sw	$ra, 0($sp)
 	sw	$a1, 4($sp)
@@ -240,16 +242,10 @@ GET_VRAM_ADDR:
 	lw	$a1, 4($sp)
 	lw	$a2, 8($sp)
 	lw	$t0, 12($sp)
-	addi	$sp, $sp, 20
+	addi	$sp, $sp, 16
 	jr	$ra
-<<<<<<< HEAD
-PAGE_SCROLL:
-	addi	$sp, $sp, -24
-=======
-
 PAGE_SCROLL:
 	addi	$sp, $sp, -28
->>>>>>> 8098cd74c51e95e6c5610ff85e5098c393f4b0b8
 	#push $ra, $a1, $a2, $t0, $t1, $t2
 	sw	$ra, 0($sp)
 	sw	$a1, 4($sp)
@@ -257,17 +253,12 @@ PAGE_SCROLL:
 	sw	$t0, 12($sp)
 	sw	$t1, 16($sp)
 	sw	$t2, 20($sp)
-<<<<<<< HEAD
-=======
 	sw	$t3, 24($sp)
->>>>>>> 8098cd74c51e95e6c5610ff85e5098c393f4b0b8
 	# load X, Y
 	la	$t1, WEIGHT
 	lw	$t1, 0($t1)
 	la	$t2, HEIGHT
 	lw	$t2, 0($t2)
-<<<<<<< HEAD
-=======
 	#LOOP
 	addi	$a2, $zero, 1
 PAGE_SCROLL_LOOP1:
@@ -281,20 +272,26 @@ PAGE_SCROLL_LOOP2:
 	add	$t3, $zero, $v0
 	sw	$t0, 0($t3)
 	addi	$a2, $a2, 1
-	bne	$a1, $t1, PAGE_SCROLL_LOOP1
-	bne	$a2, $t2, PAGE_SCROLL_LOOP2
->>>>>>> 8098cd74c51e95e6c5610ff85e5098c393f4b0b8
+	addi	$a1, $a1, 1
+	bne	$a1, $t1, PAGE_SCROLL_LOOP2
+	addi	$a2, $a2, 1
+	bne	$a2, $t2, PAGE_SCROLL_LOOP1
+	#clear last loop
+	add	$a1, $zero, $zero
+	addi	$a2, $a2, -1
+PAGE_SCROLL_CLEAR_LAST:
+	jal	GET_VRAM_ADDR
+	add	$t0, $zero, $v0
+	sw	$zero, 0($t0)
+	addi	$a1, $a1, 1
+	bne	$a1, $t1, PAGE_SCROLL_CLEAR_LAST
 	#return
 	lw	$ra, 0($sp)
 	lw	$a1, 4($sp)
 	lw	$a2, 8($sp)
 	lw	$t1, 16($sp)
 	lw	$t2, 20($sp)
-<<<<<<< HEAD
-	addi	$sp, $sp, 24
-=======
 	lw	$t3, 24($sp)
 	addi	$sp, $sp, 28
->>>>>>> 8098cd74c51e95e6c5610ff85e5098c393f4b0b8
 	jr	$ra
 	
