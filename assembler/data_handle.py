@@ -15,14 +15,30 @@ def initdata(instruction):
 		temp=data_content.split('"')[1]
 		# exec('temp='+data_content)
 		# print (temp)
+		mode=0
 		for char in temp:
-			new_data+=[get_code(ord(char),8)]
+			if (char == "\\"):
+				mode=1
+			else:
+				if mode==1:
+					new_data+=[get_code(ord(eval("\\"+char)),8)]
+					mode=0
+				else:
+					new_data+=[get_code(ord(char),8)]
 	if (data_type=='.asciiz'):
 		# exec('temp='+data_content)
 		temp=data_content.split('"')[1]
+		mode=0
 		print("asciiz temp",data_content,temp);
 		for char in temp:
-			new_data+=[get_code(ord(char),8)]
+			if (char == "\\"):
+				mode=1
+			else:
+				if mode==1:
+					new_data+=[get_code(ord(eval('"\\'+char+'"')),8)]
+					mode=0
+				else:
+					new_data+=[get_code(ord(char),8)]
 		new_data+=['00000000']
 	if (data_type=='.byte'):
 		temp=eval('['+data_content+']')
