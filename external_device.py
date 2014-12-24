@@ -227,6 +227,7 @@ class VideoGraphArray(threading.Thread):
         width = 16
         height = 16
         if self.mode:
+            
             x = (address >> 2) & 0x3ff
             y = (address >> 12) & 0x1ff
             data = self.bus.read(VRAM_ADDRESS + address)
@@ -248,7 +249,8 @@ class VideoGraphArray(threading.Thread):
             for x in range(block_x * width, (block_x + 1) * width):
                 char_y = 0
                 for y in range(block_y * height, (block_y + 1) * height):
-                    
+                    if x >= SCREEN_WIDTH || y >= SCREEN_HEIGHT:
+                        continue
                     if (zi[char_y] >> (width - 1 - char_x)) & 1:
                         self.px_arr[x, y] = (r, g, b)
                     else:
