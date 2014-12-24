@@ -242,4 +242,26 @@ GET_VRAM_ADDR:
 	lw	$t0, 12($sp)
 	addi	$sp, $sp, 20
 	jr	$ra
+PAGE_SCROLL:
+	addi	$sp, $sp, -24
+	#push $ra, $a1, $a2, $t0, $t1, $t2
+	sw	$ra, 0($sp)
+	sw	$a1, 4($sp)
+	sw	$a2, 8($sp)
+	sw	$t0, 12($sp)
+	sw	$t1, 16($sp)
+	sw	$t2, 20($sp)
+	# load X, Y
+	la	$t1, WEIGHT
+	lw	$t1, 0($t1)
+	la	$t2, HEIGHT
+	lw	$t2, 0($t2)
+	#return
+	lw	$ra, 0($sp)
+	lw	$a1, 4($sp)
+	lw	$a2, 8($sp)
+	lw	$t1, 16($sp)
+	lw	$t2, 20($sp)
+	addi	$sp, $sp, 24
+	jr	$ra
 	
