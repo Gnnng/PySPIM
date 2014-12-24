@@ -51,9 +51,72 @@ class KeyBoard(threading.Thread):
     def stop(self):
         self.running = False
 
+class VGAdrawer(threading.Thread):
+    def __init__(self, px_arr, base_y, step, mode, bus, cx, cy, cw):
+        super(VGAdrawer, self).__init__()
+        print('base is', base_y, 'step is', step)
+        self.running = False
+        self.px_arr = px_arr
+        self.base_y = base_y
+        self.step = step
+        self.mode = mode
+        self.bus = bus
+        self.cursor_x = cx
+        self.cursor_y = cy
+        self.cursor_switch = cw
+
+    def run(self):
+        self.running = True
+        while True:
+            if not self.running:
+                break
+            # px_arr[:] = (255, 255, 255)
+            for x in range(SCREEN_WIDTH):
+                # for y in range(SCREEN_HEIGHT):
+                for y in range(0, self.step):
+                    self.draw(self.px_arr, x, y + self.base_y)
+            # self.screen.blit(px_arr.make_surface(), (0, 0))
+            # pygame.display.update()
+
+    def draw(self, px_arr, x, y):
+        width = 16
+        height = 16
+        if (self.mode):
+            address = VRAM_ADDRESS + (((y << 10) + x) << 2)
+            data = self.bus.read(address)
+            r = int(((data >> 5) & 0b111) / 7.0 * 255)
+            g = int(((data >> 2) & 0b111) / 7.0 * 255)
+            b = int((data & 0b11) / 3.0 * 255)
+            px_arr[x, y] = (r, g, b)
+        else:
+            block_x = int(x / width)
+            block_y = int(y / height)
+            char_x = x % width
+            char_y = y % height
+            address = VRAM_ADDRESS + (((block_y << 7) + block_x) << 2)
+            data = self.bus.read(address)
+            r = int(((data >> 2) & 1) * 255)
+            g = int(((data >> 1) & 1) * 255)
+            b = int((data & 1) * 255)
+            code = (data >> 3) & 0xff
+            zi = FontTable[code]
+            if self.cursor_switch:
+                if blink:
+                    px_arr[x, y] = (0, 0, 0)
+                elif (zi[char_y] >> (width - 1 - char_x)) & 1:
+                    px_arr[x, y] = (r, g, b)
+            else:
+                if (zi[char_y] >> (width - 1 - char_x)) & 1:
+                    px_arr[x, y] = (r, g, b)
+
+    def stop(self):
+        self.running = False
+
 class VideoGraphArray(threading.Thread):
     def __init__(self, bus):
         super(VideoGraphArray, self).__init__()
+        self.thread_number = 30;
+        self.VGA_thread = [];
         self.bus = bus
         self.cursor_x = 0
         self.cursor_y = 0
@@ -96,22 +159,41 @@ class VideoGraphArray(threading.Thread):
 
     def run(self):
         self.running = True
-        x = 0
-        y = 0
         px_arr = pygame.PixelArray(self.background)
+        step = SCREEN_HEIGHT // self.thread_number
+        print(step)
+        for i in range(self.thread_number):
+            new_thread = VGAdrawer(px_arr, i * step,\
+                step, self.mode, self.bus, self.cursor_x, self.cursor_y, self.cursor_switch)
+            self.VGA_thread.append(new_thread)
+
+        for i in range(self.thread_number):
+            self.VGA_thread[i].start()
+
         while True:
             if not self.running:
                 break
-            px_arr[:] = (255, 255, 255)
-            for x in range(SCREEN_WIDTH):
-                # for y in range(SCREEN_HEIGHT):
-                for y in range(0, 16):
-                    self.draw(px_arr, x, y)
+            time.sleep(1)
             self.screen.blit(px_arr.make_surface(), (0, 0))
             pygame.display.update()
 
+        for i in range(self.thread_number):
+            self.VGA_thread[i].join()
+        # while True:
+        #     if not self.running:
+        #         break
+        #     px_arr[:] = (255, 255, 255)
+        #     for x in range(SCREEN_WIDTH):
+        #         # for y in range(SCREEN_HEIGHT):
+        #         for y in range(0, 16):
+        #             self.draw(px_arr, x, y)
+        #     self.screen.blit(px_arr.make_surface(), (0, 0))
+        #     pygame.display.update()
+
     def stop(self):
         self.running = False
+        for i in range(self.thread_number):
+            self.VGA_thread[i].stop()
 
     def draw(self, px_arr, x, y):
         width = 16
