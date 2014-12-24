@@ -136,6 +136,7 @@ class VideoGraphArray(threading.Thread):
 
     def write(self, address, data):
         select = address & 0xff
+        select = select >> 2
         if select == 0:
             self.cursor_x = data
         elif select == 1:
@@ -148,6 +149,7 @@ class VideoGraphArray(threading.Thread):
     def read(self, address):
         print("VGA read at ", full_hex(address))
         select = address & 0xff
+        select = select >> 2
         data = 0
         if select == 0:
             data = self.cursor_x
