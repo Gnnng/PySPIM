@@ -160,8 +160,8 @@ INT08_PRINT_CHAR_END:
 	jr	$ra
 .data 0x00000900
 	WEIGHT:	.word	40
-	HEIGHT:	.word	25
-	hi:	.asciiz	"hello world!"
+	HEIGHT:	.word	30
+	hi:	.asciiz	"hello world! hello world! hello world! hello world! hello world! hello world!"
 .text 0x00001000
 #Kernel initialization begin
 KERNEL_INIT:
@@ -242,8 +242,14 @@ GET_VRAM_ADDR:
 	lw	$t0, 12($sp)
 	addi	$sp, $sp, 20
 	jr	$ra
+<<<<<<< HEAD
 PAGE_SCROLL:
 	addi	$sp, $sp, -24
+=======
+
+PAGE_SCROLL:
+	addi	$sp, $sp, -28
+>>>>>>> 8098cd74c51e95e6c5610ff85e5098c393f4b0b8
 	#push $ra, $a1, $a2, $t0, $t1, $t2
 	sw	$ra, 0($sp)
 	sw	$a1, 4($sp)
@@ -251,17 +257,44 @@ PAGE_SCROLL:
 	sw	$t0, 12($sp)
 	sw	$t1, 16($sp)
 	sw	$t2, 20($sp)
+<<<<<<< HEAD
+=======
+	sw	$t3, 24($sp)
+>>>>>>> 8098cd74c51e95e6c5610ff85e5098c393f4b0b8
 	# load X, Y
 	la	$t1, WEIGHT
 	lw	$t1, 0($t1)
 	la	$t2, HEIGHT
 	lw	$t2, 0($t2)
+<<<<<<< HEAD
+=======
+	#LOOP
+	addi	$a2, $zero, 1
+PAGE_SCROLL_LOOP1:
+	add	$a1, $zero, $zero
+PAGE_SCROLL_LOOP2:
+	jal	GET_VRAM_ADDR
+	add	$t0, $zero, $v0
+	lw	$t0, 0($t0)
+	addi	$a2, $a2, -1
+	jal	GET_VRAM_ADDR
+	add	$t3, $zero, $v0
+	sw	$t0, 0($t3)
+	addi	$a2, $a2, 1
+	bne	$a1, $t1, PAGE_SCROLL_LOOP1
+	bne	$a2, $t2, PAGE_SCROLL_LOOP2
+>>>>>>> 8098cd74c51e95e6c5610ff85e5098c393f4b0b8
 	#return
 	lw	$ra, 0($sp)
 	lw	$a1, 4($sp)
 	lw	$a2, 8($sp)
 	lw	$t1, 16($sp)
 	lw	$t2, 20($sp)
+<<<<<<< HEAD
 	addi	$sp, $sp, 24
+=======
+	lw	$t3, 24($sp)
+	addi	$sp, $sp, 28
+>>>>>>> 8098cd74c51e95e6c5610ff85e5098c393f4b0b8
 	jr	$ra
 	
