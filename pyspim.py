@@ -349,31 +349,33 @@ class Ram(object):
 class VideoRam(object):
     def __init__(self):
         self.memory = [0] * (2**19)
+        self.vga = None
 
         # count = 0
-        # for x in 'a'*79:
+        # for x in 'a'*40:
         #     self.memory[count] = int(ord(x)) << 3;
         #     count += 1
 
         # count = 0
-        # for x in 'b'*79:
+        # for x in 'b'*39:
         #     self.memory[(1 << 7) + count] = int(ord(x)) << 3;
         #     count += 1
 
         # count = 0
-        # for x in 'c'*78:
+        # for x in 'c'*38:
         #     self.memory[(2 << 7) + count] = int(ord(x)) << 3;
         #     count += 1
 
         # count = 0
-        # for x in 'd'*76:
+        # for x in 'd'*37:
         #     self.memory[(3 << 7) + count] = int(ord(x)) << 3;
         #     count += 1
 
         # count = 0
-        # for x in 'e'*75:
+        # for x in 'e'*36:
         #     self.memory[(4 << 7) + count] = int(ord(x)) << 3;
         #     count += 1
+
     def read(self, address):
         address &= 0x1fffff
         return self.memory[address >> 2]
@@ -381,6 +383,7 @@ class VideoRam(object):
     def write(self, address, data):
         print('Write vram at', full_hex(address))
         address &= 0x1fffff
+        self.vga.update(address)
         self.memory[address >> 2] = data
 
 
@@ -428,7 +431,10 @@ def main():
             codes.append(int(x, 2))
     vm = VirtualMachine(codes)
     t = ed.ExternalDevice(vm)
+    # self.vram.vga = self.external_device.vga
     vm.bus.add_device(t)
+    vm.bus.vram.vga = vm.bus.external_device.vga
+
     t.start()
     while True:
         try:
