@@ -163,7 +163,7 @@ INT08_PRINT_CHAR_END:
 .data 0x00000900
 	WEIGHT:	.word	40
 	HEIGHT:	.word	30
-	hi:	.asciiz	"1\n2\n3\n4\n5\n6\n7\n8\n9\n10\n11\n12\n13\n14\n15\n16\n17\n18\n19\n20\n21\n22\n23\n24\n25\n26\n27\n28\n29\n30\n31"
+	hi:	.asciiz	"1\n2\n3\n4\n5\n6\n7\n8\n9\n10\n11\n12\n13\n14\n15\n16\n17\n18\n19\n20\n21\n22\n23\n24\n25\n26\n27\n28\n29\n30\n31\n32\n33\n34\n35"
 .text 0x00001000
 #Kernel initialization begin
 KERNEL_INIT:
@@ -173,6 +173,7 @@ KERNEL_INIT:
 DEAD_LOOP:
 	j	DEAD_LOOP
 #========global functions========#
+#========Load_Byte========#
 Load_Byte:
 	#push $ra, $a0, $t0, $t1
 	addi	$sp, $sp, -16
@@ -200,6 +201,7 @@ Load_Byte_End:
 	lw	$t1, 12($sp)
 	addi	$sp, $sp, 16
 	jr	$ra
+#========SHOW_CHAR========#
 SHOW_CHAR:
 	#a0 ascii, a1 X, a2 Y
 	#push $t0, $a0
@@ -222,6 +224,7 @@ SHOW_CHAR:
 	addi	$sp, $sp, 16
 	#return
 	jr	$ra
+#========GET_VRAM_ADDR========#
 GET_VRAM_ADDR:
 	addi	$sp, $sp, -16
 	#push $ra, $a1, $a2, $t0, $v0
@@ -244,6 +247,7 @@ GET_VRAM_ADDR:
 	lw	$t0, 12($sp)
 	addi	$sp, $sp, 16
 	jr	$ra
+#========PAGE_SCROLL========#
 PAGE_SCROLL:
 	addi	$sp, $sp, -28
 	#push $ra, $a1, $a2, $t0, $t1, $t2
@@ -289,6 +293,7 @@ PAGE_SCROLL_CLEAR_LAST:
 	lw	$ra, 0($sp)
 	lw	$a1, 4($sp)
 	lw	$a2, 8($sp)
+	lw	$t0, 12($sp)
 	lw	$t1, 16($sp)
 	lw	$t2, 20($sp)
 	lw	$t3, 24($sp)
