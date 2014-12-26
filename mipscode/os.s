@@ -50,6 +50,34 @@ INT_HANDLER:
 #interrupt services
 INT_SERVICES:
 INT00_SERVICE: #external device
+	#keyboard hit
+	#push $ra, $t0, $t1
+	addi	$sp, $sp, -20
+	sw	$ra, 0($sp)
+	sw	$t0, 4($sp)
+	sw	$t1, 8($sp)
+	sw	$t2, 12($sp)
+	sw	$a0, 16($sp)
+	#load scanning code
+	lui	$t0, 0xffff
+	ori	$t0, $t0, 0x0100
+	lw	$t0, 0($t0)
+	#put scanning code into the buffer
+	#la	$t1, KeyBoard_head
+	#lw	$t1, 0($t1)
+	#la	$t2, KeyBoard_tail
+	#lw	$t2, 0($t2)
+	add	$a0, $zero, $t0
+	jal	INT08_PRINT_CHAR
+	#return
+	lw	$ra, 0($sp)
+	lw	$t0, 4($sp)
+	lw	$t1, 8($sp)
+	lw	$t2, 12($sp)
+	lw	$a0, 16($a0)
+	addi	$sp, $sp, 20
+	jr	$ra
+	
 INT08_SERVICE:
 	#syscall
 	#push $a, $a0, $t0
@@ -164,12 +192,22 @@ INT08_PRINT_CHAR_END:
 	WEIGHT:	.word	40
 	HEIGHT:	.word	30
 	hi:	.asciiz	"1\n2\n3\n4\n5\n6\n7\n8\n9\n10\n11\n12\n13\n14\n15\n16\n17\n18\n19\n20\n21\n22\n23\n24\n25\n26\n27\n28\n29\n30\n31\n32\n33\n34\n35"
+	KeyBoard_buf:	.word	0
+			.word	0
+			.word	0
+			.word	0
+			.word	0
+			.word	0
+			.word	0
+			.word	0
+	#KeyBoard_head:	.word	KeyBoard_buf
+	#KeyBoard_tail:	.word	KeyBoard_buf+1
 .text 0x00001000
 #Kernel initialization begin
 KERNEL_INIT:
-	la	$a0, hi
-	li	$v0, 4
-	syscall
+	#la	$a0, hi
+	#li	$v0, 4
+	#syscall
 DEAD_LOOP:
 	j	DEAD_LOOP
 #========global functions========#
