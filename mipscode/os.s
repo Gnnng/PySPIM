@@ -21,17 +21,18 @@
 INT_HANDLER:
 	#use $k0, $k1
 	#$12: Status, $13: Cause, $14: EPC
-	#push $ra
-	addi	$sp, $sp, -4
-	sw	$ra, 0($sp)
+	push $ra
+	#addi	$sp, $sp, -4
+	#sw	$ra, 0($sp)
 	#Status 2~6 bit represents interrupt value
 	mfc0	$k0, $13 #$12: Status
 	andi	$k0, $k0, 0x007C #2~6 bits
 	addi	$k0, $k0, 0x0100 #jump to interrupt
 	lw	$k0, 0($k0)	 #get the address
 	jalr	$k0, $ra
-	lw 	$ra, 0($sp)
-	addi 	$sp, $sp, 4
+	pop	$ra
+	#lw 	$ra, 0($sp)
+	#addi 	$sp, $sp, 4
 	eret
 .data 0x00000100
 #interrupt vector table
@@ -51,13 +52,7 @@ INT_HANDLER:
 INT_SERVICES:
 INT00_SERVICE: #external device
 	#keyboard hit
-	#push $ra, $t0, $t1
-	addi	$sp, $sp, -20
-	sw	$ra, 0($sp)
-	sw	$t0, 4($sp)
-	sw	$t1, 8($sp)
-	sw	$t2, 12($sp)
-	sw	$a0, 16($sp)
+	push $ra, $t0, $t1, $t2, $a0
 	#load scanning code
 	lui	$t0, 0xffff
 	ori	$t0, $t0, 0x0100
@@ -86,21 +81,12 @@ INT00_SERVICE: #external device
 	#jal	INT08_PRINT_CHAR
 INT00_SERVICE_END:
 	#return
-	lw	$ra, 0($sp)
-	lw	$t0, 4($sp)
-	lw	$t1, 8($sp)
-	lw	$t2, 12($sp)
-	lw	$a0, 16($a0)
-	addi	$sp, $sp, 20
+	pop	$ra, $t0, $t1, $t2, $a0
 	jr	$ra
 INT08_SERVICE:
 	#syscall
-	#push $a, $a0, $t0
+	push $ra, $a0, $t0
 	#since read char is returned in $v0, so we shouldn't push $v0
-	addi	$sp, $sp, -12
-	sw	$ra, 0($sp)
-	sw	$a0, 4($sp)
-	sw	$t0, 8($sp)
 	#print_string
 	addi	$t0, $zero, 4
 	beq	$v0, $t0, INT08_PRINT_STRING
@@ -110,21 +96,12 @@ INT08_SERVICE:
 	#read_char
 	addi	$t0, $zero, 12
 	beq	$v0, $t0, INT08_READ_CHAR
-	#pop $ra, $a0, $t0
-	lw	$ra, 0($sp)
-	lw	$a0, 4($sp)
-	lw	$t0, 8($sp)
-	addi	$sp, $sp, 12
+	pop $ra, $a0, $t0
 	#return
 	jr	$ra
 INT08_PRINT_STRING:
 	#syscall print string
-	#push $ra, $v0, $a0, $t0, $a1, $a2, $t1
-	addi	$sp, $sp, -16
-	sw	$ra, 0($sp)
-	sw	$v0, 4($sp)
-	sw	$a0, 8($sp)
-	sw	$t0, 12($sp)
+	push	$ra, $v0, $a0, $t0
 	#mov $t0, $a0
 	add	$t0, $a0, $zero
 PRINT_STRING_LOOP:
@@ -139,24 +116,11 @@ PRINT_STRING_LOOP:
 	addi	$t0, $t0, 1
 	j	PRINT_STRING_LOOP
 PRINT_STRING_END_LOOP:
-	#pop $ra, $v0, $a0, $t0
-	lw	$ra, 0($sp)
-	lw	$v0, 4($sp)
-	lw	$a0, 8($sp)
-	lw	$t0, 12($sp)
-	addi	$sp, $sp, 16
+	pop $ra, $v0, $a0, $t0
 	#return
 	jr	$ra
 INT08_PRINT_CHAR:
-	#push $ra, $v0, $a0, $a1, $a2, $t0, $t1
-	addi	$sp, $sp, -28
-	sw	$ra, 0($sp)
-	sw	$v0, 4($sp)
-	sw	$a0, 8($sp)
-	sw	$a1, 12($sp)
-	sw	$a2, 16($sp)
-	sw	$t0, 20($sp)
-	sw	$t1, 24($sp)
+	push	$ra, $v0, $a0, $a1, $a2, $t0, $t1
 	#a0 ascii, a1 X, a2 Y
 	#Cursor X, Y
 	lui	$t0, 0xffff
@@ -192,24 +156,12 @@ INT08_PRINT_CHAR_END:
 	#save back X, Y
 	sw	$a1, 0($t0)
 	sw	$a2, 4($t0)
-	#pop $ra, $v0, $a0, $a1, $a2, $t0
-	lw	$ra, 0($sp)
-	lw	$v0, 4($sp)
-	lw	$a0, 8($sp)
-	lw	$a1, 12($sp)
-	lw	$a2, 16($sp)
-	lw	$t0, 20($sp)
-	lw	$t1, 24($sp)
-	addi	$sp, $sp, 28
+	pop	$ra, $v0, $a0, $a1, $a2, $t0, $t1
 	#return
 	jr	$ra
 INT08_READ_CHAR:
 	#return the ascii in $v0
-	#push 
-	addi	$sp, $sp, -12
-	sw	$ra, 0($sp)
-	sw	$t0, 4($sp)
-	sw	$t1, 8($sp)
+	push	$ra, $t0, $t1
 INT08_READ_CHAR_LOOP:
 	la	$t0, KeyBoard_buf_notNull
 	lw	$t0, 0($t0)
@@ -218,15 +170,12 @@ INT08_READ_CHAR_LOOP:
 	lw	$v0, 0($t1)
 	la	$t0, KeyBoard_buf_notNull
 	sw	$zero, 0($t0)
-	#pop
-	lw	$ra, 0($sp)
-	lw	$t0, 4($sp)
-	lw	$t1, 8($sp)
+	pop	$ra, $t0, $t1
 	jr	$ra
 .data 0x00000900
 	WEIGHT:	.word	40
 	HEIGHT:	.word	30
-	hi:	.asciiz	"1\n2\n3\n4\n5\n6\n7\n8\n9\n10\n11\n12\n13\n14\n15\n16\n17\n18\n19\n20\n21\n22\n23\n24\n25\n26\n27\n28\n29\n30\n31\n32\n33\n34\n35"
+	hi:	.asciiz	"1\n2\n3\n4\n5\n6\n7\n8\n9\n10\n11\n12\n13\n14\n15\n16\n17\n18\n19\n20\n21\n22\n23\n24\n25\n26\n27\n28\n29\n30\n31\n32\n33\n34\n35\n"
 	KeyBoard_buf:	.word	0
 			.word	0
 			.word	0
@@ -241,22 +190,15 @@ INT08_READ_CHAR_LOOP:
 .text 0x00001000
 #Kernel initialization begin
 KERNEL_INIT:
-	addi	$v0, $zero, 12
-	syscall
-	add	$a0, $zero, $v0
-	addi	$v0, $zero, 11
+	addi	$v0, $zero, 4
+	la	$a0, hi
 	syscall
 DEAD_LOOP:
 	j	DEAD_LOOP
 #========global functions========#
 #========Load_Byte========#
 Load_Byte:
-	#push $ra, $a0, $t0, $t1
-	addi	$sp, $sp, -16
-	sw	$ra, 0($sp)
-	sw	$a0, 4($sp)
-	sw	$t0, 8($sp)
-	sw	$t1, 12($sp)
+	push $ra, $a0, $t0, $t1
 	#$t0 is the relative offset
 	andi	$t0, $a0, 3
 	addi	$t0, $t0, -3
@@ -271,43 +213,24 @@ Load_Byte_Loop:
 Load_Byte_End:
 	#return in $v0
 	andi	$v0, $t1, 0xff
-	lw	$ra, 0($sp)
-	lw	$a0, 4($sp)
-	lw	$t0, 8($sp)
-	lw	$t1, 12($sp)
-	addi	$sp, $sp, 16
+	pop	$ra, $a0, $t0, $t1
 	jr	$ra
 #========SHOW_CHAR========#
 SHOW_CHAR:
 	#a0 ascii, a1 X, a2 Y
-	#push $t0, $a0
-	addi	$sp, $sp, -16
-	sw	$t0, 0($sp)
-	sw	$a0, 4($sp)
-	sw 	$t1, 8($sp)
-	sw 	$ra, 12($sp)
+	push	$ra, $a0, $t0, $t1 
 	sll	$a0, $a0, 3
 	#offset
 	jal	GET_VRAM_ADDR
 	add	$t0, $zero, $v0
 	#save word
 	sw	$a0, 0($t0)
-	#pop $t0, $a0
-	lw	$t0, 0($sp)
-	lw	$a0, 4($sp)
-	lw 	$t1, 8($sp)
-	lw 	$ra, 12($sp)
-	addi	$sp, $sp, 16
+	pop	$ra, $a0, $t0, $t1
 	#return
 	jr	$ra
 #========GET_VRAM_ADDR========#
 GET_VRAM_ADDR:
-	addi	$sp, $sp, -16
-	#push $ra, $a1, $a2, $t0, $v0
-	sw	$ra, 0($sp)
-	sw	$a1, 4($sp)
-	sw	$a2, 8($sp)
-	sw	$t0, 12($sp)
+	push	$ra, $a1, $a2, $t0
 	#calculate vram addr
 	#$a1 = X, $a2 = Y
 	add	$v0, $zero, $a2
@@ -317,23 +240,11 @@ GET_VRAM_ADDR:
 	lui $t0, 0x1000 
 	or  $v0, $v0, $t0
 	# return $v0
-	lw	$ra, 0($sp)
-	lw	$a1, 4($sp)
-	lw	$a2, 8($sp)
-	lw	$t0, 12($sp)
-	addi	$sp, $sp, 16
+	pop	$ra, $a1, $a2, $t0
 	jr	$ra
 #========PAGE_SCROLL========#
 PAGE_SCROLL:
-	addi	$sp, $sp, -28
-	#push $ra, $a1, $a2, $t0, $t1, $t2
-	sw	$ra, 0($sp)
-	sw	$a1, 4($sp)
-	sw	$a2, 8($sp)
-	sw	$t0, 12($sp)
-	sw	$t1, 16($sp)
-	sw	$t2, 20($sp)
-	sw	$t3, 24($sp)
+	push	$ra, $a1, $a2, $t0, $t1, $t2, $t3
 	# load X, Y
 	la	$t1, WEIGHT
 	lw	$t1, 0($t1)
@@ -366,12 +277,5 @@ PAGE_SCROLL_CLEAR_LAST:
 	addi	$a1, $a1, 1
 	bne	$a1, $t1, PAGE_SCROLL_CLEAR_LAST
 	#return
-	lw	$ra, 0($sp)
-	lw	$a1, 4($sp)
-	lw	$a2, 8($sp)
-	lw	$t0, 12($sp)
-	lw	$t1, 16($sp)
-	lw	$t2, 20($sp)
-	lw	$t3, 24($sp)
-	addi	$sp, $sp, 28
+	pop	$ra, $a1, $a2, $t0, $t1, $t2, $t3
 	jr	$ra
