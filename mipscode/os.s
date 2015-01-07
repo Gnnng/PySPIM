@@ -67,8 +67,24 @@ INT00_SERVICE: #external device
 	#lw	$t1, 0($t1)
 	#la	$t2, KeyBoard_tail
 	#lw	$t2, 0($t2)
+	#if (tail+1) % len == head then return
+	#else put char in tail
+	#addi	$t3, $t2, 1   
+	#andi	$t3, $t3, 0x7	#$t3 = ($t2 + 1) % buf_len
+	#beq	$t1, $t3, INT00_SERVICE_END	#$t3 != head
+	#la	$t1, KeyBoard_buf
+	#add	$t1, $t2, $t1
+	#sw	$t0, 0($t1)	#write buf
+	#la	$t2, KeyBoard_tail	#write tail
+	#sw	$t3, 0($t2)
 	add	$a0, $zero, $t0
-	jal	INT08_PRINT_CHAR
+	la	$t1, KeyBoard_buf
+	sw	$a0, 0($t1)
+	addi	$t0, $zero, 1
+	la	$t1, KeyBoard_buf_notNull
+	sw	$t0, 0($t1)
+	#jal	INT08_PRINT_CHAR
+INT00_SERVICE_END:
 	#return
 	lw	$ra, 0($sp)
 	lw	$t0, 4($sp)
@@ -77,7 +93,6 @@ INT00_SERVICE: #external device
 	lw	$a0, 16($a0)
 	addi	$sp, $sp, 20
 	jr	$ra
-	
 INT08_SERVICE:
 	#syscall
 	#push $a, $a0, $t0
@@ -93,8 +108,8 @@ INT08_SERVICE:
 	addi	$t0, $zero, 11
 	beq	$v0, $t0, INT08_PRINT_CHAR
 	#read_char
-	#addi	$t0, $zero, 12
-	#beq	$v0, $t0, INT08_READ_CHAR
+	addi	$t0, $zero, 12
+	beq	$v0, $t0, INT08_READ_CHAR
 	#pop $ra, $a0, $t0
 	lw	$ra, 0($sp)
 	lw	$a0, 4($sp)
@@ -188,6 +203,26 @@ INT08_PRINT_CHAR_END:
 	addi	$sp, $sp, 28
 	#return
 	jr	$ra
+INT08_READ_CHAR:
+	#return the ascii in $v0
+	#push 
+	addi	$sp, $sp, -12
+	sw	$ra, 0($sp)
+	sw	$t0, 4($sp)
+	sw	$t1, 8($sp)
+INT08_READ_CHAR_LOOP:
+	la	$t0, KeyBoard_buf_notNull
+	lw	$t0, 0($t0)
+	beq	$t0, $zero, INT08_READ_CHAR_LOOP
+	la	$t1, KeyBoard_buf
+	lw	$v0, 0($t1)
+	la	$t0, KeyBoard_buf_notNull
+	sw	$zero, 0($t0)
+	#pop
+	lw	$ra, 0($sp)
+	lw	$t0, 4($sp)
+	lw	$t1, 8($sp)
+	jr	$ra
 .data 0x00000900
 	WEIGHT:	.word	40
 	HEIGHT:	.word	30
@@ -200,14 +235,17 @@ INT08_PRINT_CHAR_END:
 			.word	0
 			.word	0
 			.word	0
-	#KeyBoard_head:	.word	KeyBoard_buf
-	#KeyBoard_tail:	.word	KeyBoard_buf+1
+	KeyBoard_buf_notNull:	.word	0
+	#KeyBoard_head:	.word	0
+	#KeyBoard_tail:	.word	0
 .text 0x00001000
 #Kernel initialization begin
 KERNEL_INIT:
-	#la	$a0, hi
-	#li	$v0, 4
-	#syscall
+	addi	$v0, $zero, 12
+	syscall
+	add	$a0, $zero, $v0
+	addi	$v0, $zero, 11
+	syscall
 DEAD_LOOP:
 	j	DEAD_LOOP
 #========global functions========#
@@ -337,4 +375,3 @@ PAGE_SCROLL_CLEAR_LAST:
 	lw	$t3, 24($sp)
 	addi	$sp, $sp, 28
 	jr	$ra
-	
