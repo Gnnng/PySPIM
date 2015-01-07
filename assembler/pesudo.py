@@ -1,6 +1,6 @@
 import re
 from initial import get_code
-pesudo_list=['la','li']
+pesudo_list=['la','li','pop','push']
 def encode_pesudo_la(origin_instruction,var_list):
 	# print (var_list)
 	# print ("ins:",origin_instruction)
@@ -42,7 +42,31 @@ def encode_pesudo_li(origin_instruction,var_list):
 	except SyntaxError:
 		raise ValueError('Error expression:'+ immediate)
 	return real_list
+def encode_pesudo_push(origin_instruction,var_list):
+	real_list=[]
+	reg_list=origin_instruction.split(',');
+	real_list+=['addi $sp,$sp,'+str(len(reg_list)*(-4))]
+	pint=0
+	for reg in reg_list:
+		real_list+=['sw '+reg+','+str(pint)+'($sp)']
+		pint+=4
+	# print ("real")
+	# print (real_list)
+	return real_list
+def encode_pesudo_pop(origin_instruction,var_list):
+	real_list=[]
+	reg_list=origin_instruction.split(',');
+	pint=0
+	for reg in reg_list:
+		real_list+=['lw '+reg+','+str(pint)+'($sp)']
+		pint+=4
+	# print ("real")
+	# print (real_list)
+	real_list+=['addi $sp,$sp,'+str(len(reg_list)*(4))]
+	return real_list
 pesudo_function={
 	'la':encode_pesudo_la,
-	'li':encode_pesudo_li
+	'li':encode_pesudo_li,
+	'pop':encode_pesudo_pop,
+	'push':encode_pesudo_push 
 }

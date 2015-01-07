@@ -95,6 +95,7 @@ def encode(input_list):
 			continue
 		print("=====now instruction=====",instruction.content,"|label:",instruction.label)
 		if (instruction.type=='text'):
+			print("text")
 			new_real_list=pesudo_encode(instruction,variable_list)
 		else:
 			new_real_list=[instruction]
@@ -194,7 +195,7 @@ def encode(input_list):
 		# pass
 		# if (instruction.type=='text'):
 		print (instruction.content)
-		print (now_loc)
+		# print (now_loc)
 		# result_file.write(instruction.code+'\n')
 		# print (instruction.code,file=result_file)
 		loc_ins[now_loc]=instruction.code;

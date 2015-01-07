@@ -79,7 +79,10 @@ def pesudo_encode(input_instruction,var_list):
 	operator=input_instruction.content.split()[0]
 	other_asm=""
 	other_asm=other_asm.join(input_instruction.content.split()[1:])
+	print ("now pesudo")
+	print (operator)
 	# real_list=[]
+	print(pesudo_list)
 	if (operator in pesudo_list):
 		# real_list=encode_pesudo_la(other_asm,var_list)
 		real_list=pesudo_function[operator](other_asm,var_list)
