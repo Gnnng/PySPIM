@@ -25,7 +25,7 @@ INT_HANDLER:
 	#addi	$sp, $sp, -4
 	#sw	$ra, 0($sp)
 	#Status 2~6 bit represents interrupt value
-	mfc0	$k0, $13 #$12: Status
+	mfc0	$13, $k0 #$12: Status
 	andi	$k0, $k0, 0x007C #2~6 bits
 	addi	$k0, $k0, 0x0100 #jump to interrupt
 	lw	$k0, 0($k0)	 #get the address
