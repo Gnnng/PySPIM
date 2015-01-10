@@ -7,8 +7,8 @@
 #interrupt address initialization
 	li  $sp, 0xfffc
 	#int00
-	la	$t0, int00
-	la	$t1, INT00_SERVICE
+	la	$t0, int01
+	la	$t1, INT01_SERVICE
 	sw	$t1, 0($t0)
 	#int08
 	la	$t0, int08
@@ -38,7 +38,7 @@ INT_HANDLER:
 #interrupt vector table
 #init 0, everytime the program runs, load it
 	int00:	.word	0 #all external interrupt
-		.word 	0
+	int01:	.word 	0
 		.word 	0
 		.word 	0
 		.word 	0
@@ -50,9 +50,9 @@ INT_HANDLER:
 .text 0x00000200
 #interrupt services
 INT_SERVICES:
-INT00_SERVICE: #external device
+INT01_SERVICE: #Keyboard interrupt
 	#keyboard hit
-	push $ra, $t0, $t1, $t2, $a0
+	push	$ra, $t0, $t1, $t2, $a0
 	#load scanning code
 	lui	$t0, 0xffff
 	ori	$t0, $t0, 0x0100
@@ -60,17 +60,28 @@ INT00_SERVICE: #external device
 	#put ZBCode into the buffer
 	#addi	$t1, $zero, 0xF0
 	#beq	$t0, $t1, READ_BREAK_CODE
-#READ_MAKE_CODE
+#READ_MAKE_CODE:
 	#add	$a0, $t0, $zero
 	#jal	TURN_TO_ZB
 	#add	$a0, $v0, $zero
 	#jal	PUT_INTO_KEYBOARD_BUF
-INT00_SERVICE_END:
+INT01_SERVICE_END:
 	#return
 	pop	$ra, $t0, $t1, $t2, $a0
 	jr	$ra
 INT08_SERVICE:
 	#syscall
+	mfc0	$11, $k0
+	mfc0	$12, $k1
+	push	$k0, $k1
+	mfc0	$13, $k1
+	push	$k1
+	mfc0	$14, $k1
+	push	$k1
+	mfc0	$15, $k1
+	push	$k1
+	li	$k0, 0x80000000
+	mtc0	$11, $k0
 	push $ra, $a0, $t0
 	#since read char is returned in $v0, so we shouldn't push $v0
 	#print_string
@@ -84,6 +95,14 @@ INT08_SERVICE:
 	beq	$v0, $t0, INT08_READ_CHAR
 	pop $ra, $a0, $t0
 	#return
+	pop	$k0, $k1
+	mtc0	$11, $k0
+	mtc0	$12, $k1
+	pop	$k0, $k1
+	mfc0	$13, $k0
+	mfc0	$14, $k1
+	pop	$k1
+	mfc0	$15, $k1
 	jr	$ra
 INT08_PRINT_STRING:
 	#syscall print string
