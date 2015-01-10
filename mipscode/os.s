@@ -57,28 +57,14 @@ INT00_SERVICE: #external device
 	lui	$t0, 0xffff
 	ori	$t0, $t0, 0x0100
 	lw	$t0, 0($t0)
-	#put scanning code into the buffer
-	#la	$t1, KeyBoard_head
-	#lw	$t1, 0($t1)
-	#la	$t2, KeyBoard_tail
-	#lw	$t2, 0($t2)
-	#if (tail+1) % len == head then return
-	#else put char in tail
-	#addi	$t3, $t2, 1   
-	#andi	$t3, $t3, 0x7	#$t3 = ($t2 + 1) % buf_len
-	#beq	$t1, $t3, INT00_SERVICE_END	#$t3 != head
-	#la	$t1, KeyBoard_buf
-	#add	$t1, $t2, $t1
-	#sw	$t0, 0($t1)	#write buf
-	#la	$t2, KeyBoard_tail	#write tail
-	#sw	$t3, 0($t2)
-	add	$a0, $zero, $t0
-	la	$t1, KeyBoard_buf
-	sw	$a0, 0($t1)
-	addi	$t0, $zero, 1
-	la	$t1, KeyBoard_buf_notNull
-	sw	$t0, 0($t1)
-	#jal	INT08_PRINT_CHAR
+	#put ZBCode into the buffer
+	#addi	$t1, $zero, 0xF0
+	#beq	$t0, $t1, READ_BREAK_CODE
+#READ_MAKE_CODE
+	#add	$a0, $t0, $zero
+	#jal	TURN_TO_ZB
+	#add	$a0, $v0, $zero
+	#jal	PUT_INTO_KEYBOARD_BUF
 INT00_SERVICE_END:
 	#return
 	pop	$ra, $t0, $t1, $t2, $a0
@@ -131,8 +117,23 @@ INT08_PRINT_CHAR:
 	bne	$a0, $t1, INT08_PRINT_CHAR_EXEC
 	add	$a1, $zero, $zero
 	addi	$a2, $a2, 1
-	#jump to end
 	j	INT08_PRINT_CHAR_MOVE_X
+	#if a0 = backspace
+	addi	$t1, $zero, 8
+	bne	$a0, $t1, INT08_PRINT_CHAR_EXEC
+	add	$a0, $zero, $zero
+	bne	$a1, $zero, INT08_PRINT_CHAR_BACKSPACE
+	beq	$a2, $zero, INT08_PRINT_CHAR_BACKSPACE_EXEC
+	addi	$a2, $a2, -1
+	la	$t1, WEIGHT
+	lw	$a1, 0($t1)
+INT08_PRINT_CHAR_BACKSPACE:
+	addi	$a1, $a1, -1
+INT08_PRINT_CHAR_BACKSPACE_EXEC:
+	jal	SHOW_CHAR
+	#jump to end
+	j	INT08_PRINT_CHAR_END
+	#backspace exec end
 INT08_PRINT_CHAR_EXEC:
 	jal	SHOW_CHAR
 	#X+1
@@ -184,9 +185,8 @@ INT08_READ_CHAR_LOOP:
 			.word	0
 			.word	0
 			.word	0
-	KeyBoard_buf_notNull:	.word	0
-	#KeyBoard_head:	.word	0
-	#KeyBoard_tail:	.word	0
+	KeyBoard_head:	.word	0
+	KeyBoard_tail:	.word	0
 .text 0x00001000
 #Kernel initialization begin
 KERNEL_INIT:
@@ -218,14 +218,14 @@ Load_Byte_End:
 #========SHOW_CHAR========#
 SHOW_CHAR:
 	#a0 ascii, a1 X, a2 Y
-	push	$ra, $a0, $t0, $t1 
+	push	$ra, $a0, $t0 
 	sll	$a0, $a0, 3
 	#offset
 	jal	GET_VRAM_ADDR
 	add	$t0, $zero, $v0
 	#save word
 	sw	$a0, 0($t0)
-	pop	$ra, $a0, $t0, $t1
+	pop	$ra, $a0, $t0
 	#return
 	jr	$ra
 #========GET_VRAM_ADDR========#
@@ -278,4 +278,233 @@ PAGE_SCROLL_CLEAR_LAST:
 	bne	$a1, $t1, PAGE_SCROLL_CLEAR_LAST
 	#return
 	pop	$ra, $a1, $a2, $t0, $t1, $t2, $t3
+	jr	$ra
+#========GET_ZB_CODE========#
+GET_ZB_CODE:
+	push	$ra, $a0, $t0
+	addi 	$v0, $zero, 48
+	xori 	$t0, $a0, 0x45 		# 0
+	beq 	$t0, $zero, GET_ZB_CODE_END
+	addi 	$v0, $v0, 1
+	xori 	$t0, $a0, 0x16 		# 1
+	beq 	$t0, $zero, GET_ZB_CODE_END
+	addi 	$v0, $v0, 1
+	xori 	$t0, $a0, 0x1e 		# 2
+	beq 	$t0, $zero, GET_ZB_CODE_END
+	addi 	$v0, $v0, 1
+	xori 	$t0, $a0, 0x26 		# 3
+	beq 	$t0, $zero, GET_ZB_CODE_END
+	addi 	$v0, $v0, 1
+	xori 	$t0, $a0, 0x25 		# 4
+	beq 	$t0, $zero, GET_ZB_CODE_END
+	addi 	$v0, $v0, 1
+	xori 	$t0, $a0, 0x2e 		# 5
+	beq 	$t0, $zero, GET_ZB_CODE_END
+	addi 	$v0, $v0, 1
+	xori 	$t0, $a0, 0x36 		# 6
+	beq 	$t0, $zero, GET_ZB_CODE_END
+	addi 	$v0, $v0, 1
+	xori 	$t0, $a0, 0x3d 		# 7
+	beq 	$t0, $zero, GET_ZB_CODE_END
+	addi 	$v0, $v0, 1
+	xori 	$t0, $a0, 0x3e 		# 8
+	beq 	$t0, $zero, GET_ZB_CODE_END
+	addi 	$v0, $v0, 1
+	xori 	$t0, $a0, 0x46 		# 9
+	beq 	$t0, $zero, GET_ZB_CODE_END
+	addi 	$v0, $zero, 97
+	xori	$t0, $a0, 0x1c		# a
+	beq 	$t0, $zero, GET_ZB_CODE_END
+	addi 	$v0, $v0, 1
+	xori 	$t0, $a0, 0x32		# b
+	beq 	$t0, $zero, GET_ZB_CODE_END
+	addi 	$v0, $v0, 1
+	xori 	$t0, $a0, 0x21 		# c
+	beq 	$t0, $zero, GET_ZB_CODE_END
+	addi 	$v0, $v0, 1
+	xori 	$t0, $a0, 0x23 		# d
+	beq 	$t0, $zero, GET_ZB_CODE_END
+	addi 	$v0, $v0, 1
+	xori 	$t0, $a0, 0x24 		# e
+	beq 	$t0, $zero, GET_ZB_CODE_END
+	addi 	$v0, $v0, 1
+	xori 	$t0, $a0, 0x2b		# f
+	beq 	$t0, $zero, GET_ZB_CODE_END
+	addi 	$v0, $v0, 1
+	xori 	$t0, $a0, 0x34		# g
+	beq 	$t0, $zero, GET_ZB_CODE_END
+	addi 	$v0, $v0, 1
+	xori 	$t0, $a0, 0x33		# h
+	beq 	$t0, $zero, GET_ZB_CODE_END
+	addi 	$v0, $v0, 1
+	xori 	$t0, $a0, 0x43		# i
+	beq 	$t0, $zero, GET_ZB_CODE_END
+	addi 	$v0, $v0, 1
+	xori 	$t0, $a0, 0x3b		# j
+	beq 	$t0, $zero, GET_ZB_CODE_END
+	addi 	$v0, $v0, 1
+	xori 	$t0, $a0, 0x42		# k
+	beq 	$t0, $zero, GET_ZB_CODE_END
+	addi 	$v0, $v0, 1
+	xori 	$t0, $a0, 0x4b		# l
+	beq 	$t0, $zero, GET_ZB_CODE_END
+	addi 	$v0, $v0, 1
+	xori 	$t0, $a0, 0x3a		# m
+	beq 	$t0, $zero, GET_ZB_CODE_END
+	addi 	$v0, $v0, 1
+	xori 	$t0, $a0, 0x31		# n
+	beq 	$t0, $zero, GET_ZB_CODE_END
+	addi 	$v0, $v0, 1
+	xori 	$t0, $a0, 0x44		# o
+	beq 	$t0, $zero, GET_ZB_CODE_END
+	addi 	$v0, $v0, 1
+	xori 	$t0, $a0, 0x4d		# p
+	beq 	$t0, $zero, GET_ZB_CODE_END
+	addi 	$v0, $v0, 1
+	xori 	$t0, $a0, 0x15		# q
+	beq 	$t0, $zero, GET_ZB_CODE_END
+	addi 	$v0, $v0, 1
+	xori 	$t0, $a0, 0x2d		# r
+	beq 	$t0, $zero, GET_ZB_CODE_END
+	addi 	$v0, $v0, 1
+	xori 	$t0, $a0, 0x1b		# s
+	beq 	$t0, $zero, GET_ZB_CODE_END
+	addi 	$v0, $v0, 1
+	xori 	$t0, $a0, 0x2c		# t
+	beq 	$t0, $zero, GET_ZB_CODE_END
+	addi 	$v0, $v0, 1
+	xori 	$t0, $a0, 0x3c		# u
+	beq 	$t0, $zero, GET_ZB_CODE_END
+	addi 	$v0, $v0, 1
+	xori 	$t0, $a0, 0x2a		# v
+	beq 	$t0, $zero, GET_ZB_CODE_END
+	addi 	$v0, $v0, 1
+	xori 	$t0, $a0, 0x1d		# w
+	beq 	$t0, $zero, GET_ZB_CODE_END
+	addi 	$v0, $v0, 1
+	xori 	$t0, $a0, 0x22		# x
+	beq 	$t0, $zero, GET_ZB_CODE_END
+	addi 	$v0, $v0, 1
+	xori 	$t0, $a0, 0x35		# y
+	beq 	$t0, $zero, GET_ZB_CODE_END
+	addi 	$v0, $v0, 1
+	xori 	$t0, $a0, 0x1a		# z
+	beq 	$t0, $zero, GET_ZB_CODE_END
+	addi 	$v0, $zero, 96
+	xori 	$t0, $a0, 0x0e 		# `
+	beq 	$t0, $zero, GET_ZB_CODE_END
+	addi 	$v0, $zero, 45
+	xori 	$t0, $a0, 0x4e 		# -
+	beq 	$t0, $zero, GET_ZB_CODE_END
+	addi 	$v0, $zero, 61
+	xori 	$t0, $a0, 0x55 		# =
+	beq 	$t0, $zero, GET_ZB_CODE_END
+	addi 	$v0, $zero, 8
+	xori 	$t0, $a0, 0x66 		# backspace
+	beq 	$t0, $zero, GET_ZB_CODE_END
+	addi 	$v0, $zero, 32
+	xori 	$t0, $a0, 0x29 		# space
+	beq 	$t0, $zero, GET_ZB_CODE_END
+	addi 	$v0, $zero, 9
+	xori 	$t0, $a0, 0x0d 		# tab
+	beq 	$t0, $zero, GET_ZB_CODE_END
+	addi 	$v0, $zero, 10
+	xori 	$t0, $a0, 0x5a 		# enter
+	beq 	$t0, $zero, GET_ZB_CODE_END
+	addi 	$v0, $zero, 27
+	xori 	$t0, $a0, 0x76 		# esc
+	beq 	$t0, $zero, GET_ZB_CODE_END
+	addi 	$v0, $zero, 91
+	xori 	$t0, $a0, 0x54 		# [
+	beq 	$t0, $zero, GET_ZB_CODE_END
+	addi 	$v0, $zero, 93
+	xori 	$t0, $a0, 0x5b 		# ]
+	beq 	$t0, $zero, GET_ZB_CODE_END
+	addi 	$v0, $zero, 59
+	xori 	$t0, $a0, 0x4c 		# ;
+	beq 	$t0, $zero, GET_ZB_CODE_END
+	addi 	$v0, $zero, 39
+	xori 	$t0, $a0, 0x52 		# '
+	beq 	$t0, $zero, GET_ZB_CODE_END
+	addi 	$v0, $zero, 44
+	xori 	$t0, $a0, 0x41 		# ,
+	beq 	$t0, $zero, GET_ZB_CODE_END
+	addi 	$v0, $zero, 46
+	xori 	$t0, $a0, 0x49 		# .
+	beq 	$t0, $zero, GET_ZB_CODE_END
+	addi 	$v0, $zero, 47
+	xori 	$t0, $a0, 0x4a 		# /
+	beq 	$t0, $zero, GET_ZB_CODE_END
+	addi 	$v0, $zero, 92			
+	xori 	$t0, $a0, 0x5d 		# \
+	beq 	$t0, $zero, GET_ZB_CODE_END
+	addi 	$v0, $zero, 0x80			
+	xori 	$t0, $a0, 0x75 		# up
+	beq 	$t0, $zero, GET_ZB_CODE_END
+	addi 	$v0, $zero, 0x81
+	xori 	$t0, $a0, 0x72 		# down
+	beq 	$t0, $zero, GET_ZB_CODE_END
+	addi 	$v0, $zero, 0x82
+	xori 	$t0, $a0, 0x6b 		# left
+	beq 	$t0, $zero, GET_ZB_CODE_END
+	addi 	$v0, $zero, 0x83
+	xori 	$t0, $a0, 0x74 		# right
+	beq 	$t0, $zero, GET_ZB_CODE_END
+	addi 	$v0, $zero, 0
+GET_ZB_CODE_END:
+	pop	$ra, $a0, $t0
+	jr	$ra
+#========READ_BREAK_CODE========#
+READ_BREAK_CODE:
+	push	$ra, $a0, $t0
+	jal	GET_FROM_KEYBOARD_BUF
+	add	$a0, $v0, $zero
+	jal	GET_ZB_CODE
+	#return
+	pop	$ra, $a0, $t0
+	jr	$ra
+#========READ_BREAK_CODE========#
+PUT_INTO_KEYBOARD_BUF:
+	push	$ra, $a0, $t0, $t1, $t2
+	#main
+	la	$t0, KeyBoard_tail
+	# if head-1 = tail then buf is full
+	la	$t2, KeyBoard_head
+	addi	$t2, $t2, -1
+	andi	$t2, $t2, 0x7
+	beq	$t0, $t2, PUT_INTO_KEYBOARD_BUF_END
+	#load buf
+	la	$t1, KeyBoard_buf
+	# buf[tail] = a0
+	add	$t1, $t1, $t0
+	sw	$a0, 0($t1)
+	# tail %= tail+1
+	addi	$t0, $t0, 1
+	andi	$t0, $t0, 0x7
+	la	$t1, KeyBoard_tail
+	sw	$t0, 0($t1)
+PUT_INTO_KEYBOARD_BUF_END:
+	#return
+	pop	$ra, $a0, $t0, $t1, $t2
+	jr	$ra
+#========READ_BREAK_CODE========#
+GET_FROM_KEYBOARD_BUF:
+	push	$ra, $t0, $t1, $t2
+	#if head=tail then buf is empty
+	la	$t0, KeyBoard_head
+	la	$t1, KeyBoard_tail
+	beq	$t0, $t1, GET_FROM_KEYBOARD_BUF_END
+	# load buf
+	la	$t1, KeyBoard_buf
+	# v0 = buf[head]
+	add	$t1, $t1, $t0
+	lw	$v0, 0($t1)
+	# head %= head + 1
+	addi	$t0, $t0, 1
+	andi	$t0, $t0, 0x7
+	la	$t1, KeyBoard_head
+	sw	$t0, 0($t1)
+GET_FROM_KEYBOARD_BUF_END:
+	#return
+	pop	$ra, $t0, $t1, $t2
 	jr	$ra
