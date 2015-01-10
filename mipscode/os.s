@@ -102,7 +102,7 @@ PRINT_STRING_LOOP:
 	addi	$t0, $t0, 1
 	j	PRINT_STRING_LOOP
 PRINT_STRING_END_LOOP:
-	pop $ra, $v0, $a0, $t0
+	pop	$ra, $v0, $a0, $t0
 	#return
 	jr	$ra
 INT08_PRINT_CHAR:
@@ -163,14 +163,6 @@ INT08_PRINT_CHAR_END:
 INT08_READ_CHAR:
 	#return the ascii in $v0
 	push	$ra, $t0, $t1
-INT08_READ_CHAR_LOOP:
-	la	$t0, KeyBoard_buf_notNull
-	lw	$t0, 0($t0)
-	beq	$t0, $zero, INT08_READ_CHAR_LOOP
-	la	$t1, KeyBoard_buf
-	lw	$v0, 0($t1)
-	la	$t0, KeyBoard_buf_notNull
-	sw	$zero, 0($t0)
 	pop	$ra, $t0, $t1
 	jr	$ra
 .data 0x00000900
