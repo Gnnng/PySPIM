@@ -9,8 +9,8 @@
 	li          $t0, 0x80000000
 	mtc0        $11, $t0
 	#int00
-	la	$t0, int01
-	la	$t1, INT01_SERVICE
+	la	$t0, int00
+	la	$t1, INT00_SERVICE
 	sw	$t1, 0($t0)
 	#int08
 	la	$t0, int08
@@ -53,7 +53,7 @@ INT_HANDLER:
 .text 0x00000200
 #interrupt services
 INT_SERVICES:
-INT01_SERVICE: #Keyboard interrupt
+INT00_SERVICE: #Keyboard interrupt
 	#keyboard hit
 	push	$ra, $t0, $t1, $t2, $a0
 	#load scanning code
@@ -65,6 +65,7 @@ INT01_SERVICE: #Keyboard interrupt
 	add	$a0, $t0, $zero
 	jal	GET_ZB_CODE
 	add	$a0, $v0, $zero
+	jal	INT08_PRINT_CHAR
 	jal	PUT_INTO_KEYBOARD_BUF
 INT01_SERVICE_END:
 	#return
@@ -221,11 +222,14 @@ KERNEL_INIT:
 # 	addi	$v0, $zero, 4
 # 	la	$a0, get_string
 # 	syscall
-	addi	$v0, $zero, 4
-	la $a0,hi
-	#addi $a0,$a0,512
-	syscall 
 DEAD_LOOP:
+	addi	$v0, $zero, 12
+	syscall
+	add	$a0, $zero, $v0
+	addi	$v0, $zero, 11
+	#la	$a0,hi
+	#addi $a0,$a0,512
+	syscall
 	j	DEAD_LOOP
 #========global functions========#
 #========Load_Byte========#
@@ -502,10 +506,12 @@ PUT_INTO_KEYBOARD_BUF:
 	push	$ra, $a0, $t0, $t1, $t2
 	#main
 	la	$t0, KeyBoard_tail
+	lw	$t0, 0($t0)
 	# if head-1 = tail then buf is full
 	la	$t2, KeyBoard_head
-	addi	$t2, $t2, -1
-	andi	$t2, $t2, 0x7
+	lw	$t2, 0($t2)
+	addi	$t2, $t2, -4
+	andi	$t2, $t2, 0x1f
 	beq	$t0, $t2, PUT_INTO_KEYBOARD_BUF_END
 	#load buf
 	la	$t1, KeyBoard_buf
@@ -513,8 +519,8 @@ PUT_INTO_KEYBOARD_BUF:
 	add	$t1, $t1, $t0
 	sw	$a0, 0($t1)
 	# tail %= tail+1
-	addi	$t0, $t0, 1
-	andi	$t0, $t0, 0x7
+	addi	$t0, $t0, 4
+	andi	$t0, $t0, 0x1f
 	la	$t1, KeyBoard_tail
 	sw	$t0, 0($t1)
 PUT_INTO_KEYBOARD_BUF_END:
@@ -526,7 +532,9 @@ GET_FROM_KEYBOARD_BUF:
 	push	$ra, $t0, $t1, $t2
 	#if head=tail then buf is empty
 	la	$t0, KeyBoard_head
+	lw	$t0, 0($t0)
 	la	$t1, KeyBoard_tail
+	lw	$t1, 0($t1)
 	beq	$t0, $t1, GET_FROM_KEYBOARD_BUF_END
 	# load buf
 	la	$t1, KeyBoard_buf
@@ -534,8 +542,8 @@ GET_FROM_KEYBOARD_BUF:
 	add	$t1, $t1, $t0
 	lw	$v0, 0($t1)
 	# head %= head + 1
-	addi	$t0, $t0, 1
-	andi	$t0, $t0, 0x7
+	addi	$t0, $t0, 4
+	andi	$t0, $t0, 0x1f
 	la	$t1, KeyBoard_head
 	sw	$t0, 0($t1)
 GET_FROM_KEYBOARD_BUF_END:
