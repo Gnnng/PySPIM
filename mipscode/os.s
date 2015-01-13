@@ -57,14 +57,12 @@ INT01_SERVICE: #Keyboard interrupt
 	lui	$t0, 0xffff
 	ori	$t0, $t0, 0x0100
 	lw	$t0, 0($t0)
+	#if t0!= F0
 	#put ZBCode into the buffer
-	#addi	$t1, $zero, 0xF0
-	#beq	$t0, $t1, READ_BREAK_CODE
-#READ_MAKE_CODE:
-	#add	$a0, $t0, $zero
-	#jal	TURN_TO_ZB
-	#add	$a0, $v0, $zero
-	#jal	PUT_INTO_KEYBOARD_BUF
+	add	$a0, $t0, $zero
+	jal	GET_ZB_CODE
+	add	$a0, $v0, $zero
+	jal	PUT_INTO_KEYBOARD_BUF
 INT01_SERVICE_END:
 	#return
 	pop	$ra, $t0, $t1, $t2, $a0
@@ -182,6 +180,15 @@ INT08_PRINT_CHAR_END:
 INT08_READ_CHAR:
 	#return the ascii in $v0
 	push	$ra, $t0, $t1
+	#while keyboard buf is empty
+INT08_READ_CHAR_LOOP:
+	la	$t0, KeyBoard_head
+	lw	$t0, 0($t0)
+	la	$t1, KeyBoard_tail
+	lw	$t1, 0($t1)
+	beq	$t0, $t1, INT08_READ_CHAR_LOOP
+INT08_READ_CHAR_LOOP_END:
+	jal	GET_FROM_KEYBOARD_BUF
 	pop	$ra, $t0, $t1
 	jr	$ra
 .data 0x00000900
@@ -530,12 +537,13 @@ GET_FROM_KEYBOARD_BUF_END:
 	#return
 	pop	$ra, $t0, $t1, $t2
 	jr	$ra
-#00002000start
-#00010000virtual disk
-#10000000+ buffer
-#000
 
-
+	
+#############################
+#Date: 2015/1/11            #
+#Auth: Zhang Yu Hao         #
+#Func: File system          #
+#############################
 .data 0x00003000
 	test_file_name: .asciiz "hello"
 	test_string:	.asciiz "hello world"
