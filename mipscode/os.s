@@ -57,8 +57,7 @@ INT01_SERVICE: #Keyboard interrupt
 	#keyboard hit
 	push	$ra, $t0, $t1, $t2, $a0
 	#load scanning code
-	lui	$t0, 0xffff
-	ori	$t0, $t0, 0x0100
+	li  $t0, 0xffff0100
 	lw	$t0, 0($t0)
 	#if t0!= F0
 	#put ZBCode into the buffer
@@ -197,7 +196,7 @@ INT08_READ_CHAR_LOOP_END:
 .data 0x00000900
 	WEIGHT:	.word	40
 	HEIGHT:	.word	30
-	hi:	.asciiz	"Hello World\nHello again\n"
+	hi:	.asciiz	"Hello World\nHello again\n1\n2\n3\n4\n5\n6\n"
 	KeyBoard_buf:	.word	0
 			.word	0
 			.word	0
@@ -211,6 +210,7 @@ INT08_READ_CHAR_LOOP_END:
 .text 0x00001000
 #Kernel initialization begin
 KERNEL_INIT:
+
 # la $a0,test_file_name
 # la $a1,test_string
 # addi $a2,$zero,600
@@ -221,11 +221,17 @@ KERNEL_INIT:
 # 	addi	$v0, $zero, 4
 # 	la	$a0, get_string
 # 	syscall
-	addi	$v0, $zero, 4
-	la $a0,hi
+	
 	#addi $a0,$a0,512
+	li  $v0, 0x4
+	la  $a0, hi 
 	syscall 
 DEAD_LOOP:
+	addi	$v0, $zero, 12
+	syscall
+	add 	$a0, $zero, $v0
+	addi	$v0, $zero, 11
+	syscall
 	j	DEAD_LOOP
 #========global functions========#
 #========Load_Byte========#
@@ -504,7 +510,7 @@ PUT_INTO_KEYBOARD_BUF:
 	la	$t0, KeyBoard_tail
 	# if head-1 = tail then buf is full
 	la	$t2, KeyBoard_head
-	addi	$t2, $t2, -1
+	addi	$t2, $t2, -4
 	andi	$t2, $t2, 0x7
 	beq	$t0, $t2, PUT_INTO_KEYBOARD_BUF_END
 	#load buf
@@ -513,7 +519,7 @@ PUT_INTO_KEYBOARD_BUF:
 	add	$t1, $t1, $t0
 	sw	$a0, 0($t1)
 	# tail %= tail+1
-	addi	$t0, $t0, 1
+	addi	$t0, $t0, 4
 	andi	$t0, $t0, 0x7
 	la	$t1, KeyBoard_tail
 	sw	$t0, 0($t1)
@@ -534,7 +540,7 @@ GET_FROM_KEYBOARD_BUF:
 	add	$t1, $t1, $t0
 	lw	$v0, 0($t1)
 	# head %= head + 1
-	addi	$t0, $t0, 1
+	addi	$t0, $t0, 4
 	andi	$t0, $t0, 0x7
 	la	$t1, KeyBoard_head
 	sw	$t0, 0($t1)
