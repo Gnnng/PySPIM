@@ -5,7 +5,9 @@
 #############################
 .text 0x00000000
 #interrupt address initialization
-	li  $sp, 0xfffc
+	li  $sp, 0x3ffc
+	li          $t0, 0x80000000
+	mtc0        $11, $t0
 	#int00
 	la	$t0, int01
 	la	$t1, INT01_SERVICE
@@ -26,7 +28,8 @@ INT_HANDLER:
 	#sw	$ra, 0($sp)
 	#Status 2~6 bit represents interrupt value
 	mfc0	$13, $k0 #$12: Status
-	andi	$k0, $k0, 0x007C #2~6 bits
+	sll     $k0, $k0, 2
+	# andi	$k0, $k0, 0x00ff #2~6 bits
 	addi	$k0, $k0, 0x0100 #jump to interrupt
 	lw	$k0, 0($k0)	 #get the address
 	jalr	$k0, $ra
@@ -194,7 +197,7 @@ INT08_READ_CHAR_LOOP_END:
 .data 0x00000900
 	WEIGHT:	.word	40
 	HEIGHT:	.word	30
-	hi:	.asciiz	"1\n2\n3\n4\n5\n6\n7\n8\n9\n10\n11\n12\n13\n14\n15\n16\n17\n18\n19\n20\n21\n22\n23\n24\n25\n26\n27\n28\n29\n30\n31\n32\n33\n34\n35\n"
+	hi:	.asciiz	"Hello World\nHello again\n"
 	KeyBoard_buf:	.word	0
 			.word	0
 			.word	0
@@ -208,16 +211,16 @@ INT08_READ_CHAR_LOOP_END:
 .text 0x00001000
 #Kernel initialization begin
 KERNEL_INIT:
-la $a0,test_file_name
-la $a1,test_string
-addi $a2,$zero,600
-jal fat_write_file
-la $a0,test_file_name
-la $a1,get_string
-jal  fat_read_file
-	addi	$v0, $zero, 4
-	la	$a0, get_string
-	syscall
+# la $a0,test_file_name
+# la $a1,test_string
+# addi $a2,$zero,600
+# jal fat_write_file
+# la $a0,test_file_name
+# la $a1,get_string
+# jal  fat_read_file
+# 	addi	$v0, $zero, 4
+# 	la	$a0, get_string
+# 	syscall
 	addi	$v0, $zero, 4
 	la $a0,hi
 	#addi $a0,$a0,512
@@ -248,8 +251,10 @@ Load_Byte_End:
 SHOW_CHAR:
 	#a0 ascii, a1 X, a2 Y
 	push	$ra, $a0, $t0 
-	sll	$a0, $a0, 3
+	# sll	$a0, $a0, 3
 	#offset
+	li   $t0, 0x00020000
+	or 	$a0, $a0, $t0
 	jal	GET_VRAM_ADDR
 	add	$t0, $zero, $v0
 	#save word
@@ -263,7 +268,7 @@ GET_VRAM_ADDR:
 	#calculate vram addr
 	#$a1 = X, $a2 = Y
 	add	$v0, $zero, $a2
-	sll	$v0, $v0, 7
+	sll	$v0, $v0, 6
 	add	$v0, $v0, $a1
 	sll	$v0, $v0, 2
 	lui $t0, 0x1000 
@@ -537,300 +542,3 @@ GET_FROM_KEYBOARD_BUF_END:
 	#return
 	pop	$ra, $t0, $t1, $t2
 	jr	$ra
-
-	
-#############################
-#Date: 2015/1/11            #
-#Auth: Zhang Yu Hao         #
-#Func: File system          #
-#############################
-.data 0x00003000
-	test_file_name: .asciiz "hello"
-	test_string:	.asciiz "hello world"
-.data 0x00003400
-					.asciiz "hello world again!"
-	get_string: 	.asciiz "nihao zhongguo=~="
-
-.data 0x00004000
-.data 0x00007000
-
-.text
-fat_half_read:
-	push $ra
-	lw $t1,0($a0)#disk
-	andi $t2,$a0,2
-	beq $t2,$zero,read_first_half
-	j read_second_half
-	read_first_half:
-	srl $v0,$t1,16
-	pop $ra
-	jr $ra
-	read_second_half:
-	li $t2,0x0000FFFF
-	and $v0,$t1,$t2
-	pop $ra
-	jr $ra
-fat_half_write:
-	#a0 disk #a1 word
-	push $ra
-	lw $t1,0($a0)#disk
-	andi $t2,$a0,2
-	beq $t2,$zero,write_first_half
-	j write_second_half
-	write_first_half:
-	sll $a1,$a1,16
-	li $t2,0x0000FFFF
-	and $t1,$t2,$t1
-	or $t1,$a1,$t1
-	sw $t1,0($a0)
-	pop $ra
-	jr $ra
-	write_second_half:
-	li $t2,0xFFFF0000
-	and $t1,$t2,$t1
-	or $t1,$a1,$t1
-	sw $t1,0($a0)
-	pop $ra
-	jr $ra
-fat_word_read:
-	push $ra
-	lw $t1,0($a0)#disk
-	sw $t1,0($a1)#memory
-	pop $ra
-	jr $ra
-fat_word_write:
-	push $ra
-	lw $t1,0($a1)#memory
-	sw $t1,0($a0)#disk
-	pop $ra
-	jr $ra
-fat_read_cluster:#512B
-	push $ra,$s0,$s1,$s2,$s3,$s4
-	addi $s0,$zero,0
-	addi $s1,$zero,512//4
-	addi $s2,$a0,0#cluster_number
-	la $t0,fat_data_start_address
-	lw $t1,0($t0)
-	addi $a0,$a0,-1
-	sll $a0,$a0,9
-	add $s2,$a0,$t1#disk address
-	addi $s3,$a1,0#memory address
-	fat_read_cluster_loop:	
-		add $a0,$s0,$s2
-		add $a1,$s3,$zero
-		jal fat_word_read
-		addi $s3,$s3,4
-		addi $s0,$s0,4
-		bne $s0,$s1,fat_read_cluster_loop
-	add $v0,$s1,$zero
-	pop	$ra,$s0,$s1,$s2,$s3,$s4
-	jr $ra
-fat_write_cluster:#512B
-    #$a2 length $a0 number ,$a1,memory address
-	push $ra,$s0,$s1,$s2,$s3,$s4,$s5
-	addi $s0,$zero,0
-	addi $s1,$zero,512//4
-	addi $s2,$a0,0#cluster_number
-	la $t0,fat_data_start_address
-	lw $t1,0($t0)
-	addi $a0,$a0,-1
-	sll $a0,$a0,9
-	add $s2,$a0,$t1#$disk
-	addi $s3,$a1,0#memory address
-	addi $s5,$a2,0
-	fat_clear_cluster_loop:
-		la $t0,fat_zero	
-		add $a1,$zero,$t0
-		add $a0,$s2,$s0
-		jal fat_word_write
-		addi $s0,$s0,4
-		bne $s0,$s1,fat_clear_cluster_loop
-	addi $s0,$zero,0
-	addi $s1,$s5,0
-	fat_write_cluster_loop:	
-		add $a0,$s0,$s2
-		add $a1,$s3,$zero
-		jal fat_word_write
-		addi $s3,$s3,4
-		addi $s0,$s0,4
-		bne $s0,$s1,fat_write_cluster_loop
-	add $v0,$s1,$zero
-	pop	$ra,$s0,$s1,$s2,$s3,$s4,$s5
-	jr $ra
-.data
-fat_first_address:  .word   0x0004000#0
-dir_last_address:	.word 	0x0004100#0
-dir_first_address: 	.word 	0x0004100#0 
-fat_zero:			.word 	0x0000000#0
-fat_data_start_address:	.word 	0x0004500#0
-.text
-str_compare:
-	addi $t1,$zero,0
-	fat_judge_str:
-		add $t3,$a0,$t1
-		lw $t0,0($t3)
-		add $t3,$a1,$t1
-		lw $t2,0($t3)
-		li $t5,0xFF000000
-		and $t3,$t0,$t5
-		and $t4,$t2,$t5
-		bne $t3,$t4,fat_not_equal_str
-		beq $t3,$zero,fat_equal_str
-		li $t5,0x00FF0000
-		and $t3,$t0,$t5
-		and $t4,$t2,$t5
-		bne $t3,$t4,fat_not_equal_str
-		beq $t3,$zero,fat_equal_str
-		li $t5,0x0000FF00
-		and $t3,$t0,$t5
-		and $t4,$t2,$t5
-		bne $t3,$t4,fat_not_equal_str
-		beq $t3,$zero,fat_equal_str
-		li $t5,0x000000FF
-		and $t3,$t0,$t5
-		and $t4,$t2,$t5
-		bne $t3,$t4,fat_not_equal_str
-		beq $t3,$zero,fat_equal_str
-		addi $t1,$t1,4
-		j fat_judge_str
-	fat_not_equal_str:
-		addi $v0,$zero,0
-		jr $ra
-	fat_equal_str:
-		addi $v0,$zero,1
-		jr $ra
-fat_read_file:
-    #filename a0,memory address a1
-	push $ra,$s0,$s1,$s2,$s3,$s4,$s5
-	la $t0,dir_first_address
-	lw $s0,0($t0)
-	addi $s1,$zero,0
-	addi $s2,$a0,0 #filname string address
-	addi $s3,$a1,0 #memory address
-	
-	#[0..10]B name
-	#[11]type
-	#[22-25]time
-	#[26-27]address
-	#[28-31]length
-	fat_read_dir_loop:
-		#whether dir end
-		la $t1,dir_last_address
-		lw $t1,0($t1)	
-		beq $t1,$s0,fat_no_this_file
-		addi $s5,$zero,0
-		fat_load_dir_loop:
-			add  $a0,$s0,$s5
-			add  $a1,$s3,$s5
-			jal fat_word_read
-			addi $s5,$s5,4
-			addi $t0,$zero,32
-			bne $t0,$s5,fat_load_dir_loop
-		addi $a0,$s3,0
-		addi $a1,$s2,0
-		jal str_compare
-		beq $v0,$zero,fat_read_dir_loop
-		addi $a0,$s3,26
-		jal fat_half_read
-		addi $s4,$v0,0
-		fat_read_every_cluster:
-			addi $a0,$s4,0
-			addi $a1,$s3,0
-			jal fat_read_cluster
-			add $s3,$s3,$v0
-			la $t1,fat_first_address
-			lw $t0,0($t1)
-			sll $t4,$s4,1
-			add $t3,$t0,$t4
-			addi $a0,$t3,0
-			jal fat_half_read
-			addi $s4,$v0,0
-			li $t0,0xFFFF
-			bne $s4,$t0,fat_read_every_cluster
-		addi $v0,$zero,1
-		pop $ra,$s0,$s1,$s2,$s3,$s4,$s5
-		jr $ra
-	fat_no_this_file:
-	addi $v0,$zero,0
-	pop $ra,$s0,$s1,$s2,$s3,$s4,$s5
-	jr $ra
-fat_write_file:
-    # a0=filename a1=memory address a2=length
-	push $ra,$s0,$s1,$s2,$s3,$s4,$s5
-	la $t0,dir_last_address
-	lw $s0,0($t0)
-	addi $s0,$s0,32
-	sw $s0,0($t0)
-	addi $s0,$s0,-32#dir address
-	addi $s1,$s1,0
-	addi $s1,$zero,0
-	addi $s2,$a0,0 #filname string address
-	addi $s3,$a1,0 #memory address
-	addi $s4,$a2,0 #length
-	addi $s5,$zero,0
-	fat_write_file_name_loop:
-		add $a0,$s5,$s0
-		add $a1,$s5,$s2
-		jal fat_word_write
-		addi $s5,$s5,4
-		addi $t0,$zero,12
-		bne $s5,$t0,fat_write_file_name_loop
-	la $t0,fat_first_address
-	lw $t0,0($t0)
-	addi $s5,$zero,0#now cluster_number
-	fat_find_null:
-		addi $s5,$s5,1
-		sll $t2,$s5,1
-		add $t2,$t2,$t0
-		add $a0,$zero,$t2
-		jal fat_half_read
-		bne $v0,$zero,fat_find_null
-	sw $s5,24($s0)
-	slti $t0,$s4,512
-	beq $t0,$zero,fat_more_than_one
-	fat_last_one:
-	add $a2,$zero,$s4
-	addi $a1,$s3,0
-	addi $a0,$s5,0
-	jal fat_write_cluster
-	sll $t2,$s5,1
-	la $t0,fat_first_address
-	lw $t0,0($t0)
-	add $t2,$t2,$t0
-	addi $a0,$t2,0
-	li $a1,0x0000FFFF
-	jal fat_half_write
-	pop $ra,$s0,$s1,$s2,$s3,$s4,$s5
-	jr $ra
-	fat_more_than_one:
-	push $s5
-	addi $a2,$zero,512
-	addi $a1,$s3,0
-	addi $a0,$s5,0
-	jal fat_write_cluster
-	fat_find_null_in_m:
-		addi $s5,$s5,1
-		sll $t2,$s5,1
-		add $t2,$t2,$t0
-		add $a0,$zero,$t2
-		jal fat_half_read
-		bne $v0,$zero,fat_find_null_in_m
-	pop $t0
-	la $t1,fat_first_address
-	lw $t1,0($t1)
-	sll $t0,$t0,1
-	add $t3,$t0,$t1
-	addi $a0,$t3,0
-	addi $a1,$s5,0
-	jal fat_half_write
-	addi $s4,$s4,-512
-	slti $t0,$s4,512
-	beq $t0,$zero,fat_more_than_one
-	j fat_last_one
-
-	
-
-
-
-
-	
