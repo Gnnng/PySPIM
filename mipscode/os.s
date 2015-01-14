@@ -163,10 +163,11 @@ INT08_PRINT_CHAR:
 	beq	$a0, $zero, INT08_PRINT_CHAR_END
 	#if a0 = enter
 	addi	$t1, $zero, 10
-	bne	$a0, $t1, INT08_PRINT_CHAR_EXEC
+	bne	$a0, $t1, INT08_PRINT_CHAR_JUDGE_BACKSPACE
 	add	$a1, $zero, $zero
 	addi	$a2, $a2, 1
 	j	INT08_PRINT_CHAR_MOVE_X
+INT08_PRINT_CHAR_JUDGE_BACKSPACE:
 	#if a0 = backspace
 	addi	$t1, $zero, 8
 	bne	$a0, $t1, INT08_PRINT_CHAR_EXEC
@@ -240,6 +241,8 @@ INT08_READ_CHAR_LOOP_END:
 	hi:	.asciiz	"Hello World\n"
 	_DIR:	.asciiz "root"
 	_ARROW:	.asciiz ">"
+	_LIST:	.asciiz "ls"
+	_LIST_RESULT:	.asciiz "list root\n"
 	KeyBoard_buf:	.word	0
 			.word	0
 			.word	0
@@ -252,6 +255,14 @@ INT08_READ_CHAR_LOOP_END:
 	KeyBoard_tail:	.word	0
 	Typing_State:	.word	0
 	Domain_Word:	.word	0
+	COMMAND_BUF:	.word	0
+			.word	0
+			.word	0
+			.word	0
+			.word	0
+			.word	0
+			.word	0
+			.word	0
 .text 0x00001000
 #Kernel initialization begin
 KERNEL_INIT:
@@ -264,16 +275,28 @@ DEAD_LOOP:
 	#addi	$a1, $zero, 7
 	addi	$v0, $zero, 4
 	syscall
+	add	$t1, $zero, $zero
 DEAD_LOOP_2:
 	addi	$v0, $zero, 12
 	syscall
-	#li	$a0, 0x00070000
-	#add	$a0, $a0, $v0
 	add	$a0, $zero, $v0
+	la	$t0, COMMAND_BUF
+	add	$t0, $t0, $t1
+	sw	$a0, 0($t0)
 	addi	$v0, $zero, 11
 	syscall
 	li	$t0, 0x0000000A
+	addi	$t1, $t1, 4
 	bne	$a0, $t0, DEAD_LOOP_2
+	#if string == ls
+	la	$a0, COMMAND_BUF
+	la	$a1, _LIST
+	COMPARE_STRING
+	beq	$v0, $zero, DEAD_LOOP
+	#print list root
+	la	$a0, _LIST_RESULT
+	addi	$v0, $zero, 4
+	syscall
 	j	DEAD_LOOP
 #========global functions========#
 #========Load_Byte========#
@@ -611,3 +634,23 @@ SYS_INIT:
 	sw	$t1, 0($t0)
 	j	KERNEL_INIT
 	jr	$ra
+#=====COMPARE_STRING=====#
+COMPARE_STRING:
+	push	$ra, $a0, $a1, $t0, $t1
+	addi	$v0, $zero, 1
+COMPARE_STRING_LOOP:
+	lw	$t0, 0($a0)
+	lw	$t1, 0($a1)
+	bne	$t0, $t1, NOT_EQUAL
+	beq	$t0, $zero, COMPARE_STRING_LOOP_END
+	beq	$t1, $zero, COMPARE_STRING_LOOP_END
+	addi	$a0, $a0, 1
+	addi	$a1, $a1, 1
+	j	COMPARE_STRING_LOOP
+NOT_EQUAL:
+	addi	$v0, $zero, 0
+	j	COMPARE_STRING_LOOP_END
+COMPARE_STRING_LOOP_END:
+	push	$ra, $a0, $a1, $t0, $t1
+	jr	$ra
+
