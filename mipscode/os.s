@@ -61,11 +61,12 @@ INT01_SERVICE: #Keyboard interrupt
 	#$t1 = State
 	la	$t1, Typing_State
 	lw	$t1, 0($t1)
-	sll	$t1, $t1, 2
-	#$t2 + State = State[$t1]
-	la	$t2, int01_state0
-	add	$t2, $t2, $t1
-	lw	$t2, 0($t2)
+	add	$t2, $zero, $zero
+	beq	$t1, $t2, INT01_STATE_0
+	addi	$t2, $zero, 1
+	beq	$t1, $t2, INT01_STATE_1
+	addi	$t2, $zero, 2
+	beq	$t1, $t2, INT01_STATE_2
 INT01_STATE_0:
 	add	$a0, $t0, $zero
 	#Domain_Word = $a0
@@ -107,22 +108,12 @@ INT01_STATE_2:
 	#$a0 == \0
 	add	$a0, $zero, $zero
 	j	INT01_SERVICE_END
-	#put ZBCode into the buffer
-	#addi	$t1, $zero, 0xf0
-	#beq	$t0, $t1, INT01_SERVICE_END
-	#add	$a0, $t0, $zero
-	#andi	$a0, $a0, 0xff
-	#jal	GET_ZB_CODE
-	#add	$a0, $v0, $zero
-	#li 	$a0, 0x61
-	#jal	INT08_PRINT_CHAR
-	#jal	PUT_INTO_KEYBOARD_BUF
 INT01_SERVICE_END:
 	#return
 	pop	$ra, $t0, $t1, $t2, $a0
 	jr	$ra
 INT08_SERVICE:
-	# #syscall
+	#syscall
 	push $ra, $a0, $t0
 	#since read char is returned in $v0, so we shouldn't push $v0
 INT08_JUMP_PRINT_STRING:
