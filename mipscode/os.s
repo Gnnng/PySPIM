@@ -657,12 +657,14 @@ READ_COMMAND_BUF_READ:
 	lw	$s0, 0($t1)
 	addi	$t1, $zero, 8
 	beq	$s0, $t1, READ_COMMAND_BUF_LOOP
-	#if a0 = enter
-	addi	$t0, $zero, 10
-	beq	$a0, $t0, READ_COMMAND_BUF_END
-	# buf[len] = a0
+	#prepare
 	sll	$t1, $s0, 2
 	la	$t0, COMMAND_BUF
+	#if a0 = enter, buf[len] = 0
+	addi	$t0, $zero, 10
+	sw	$zero, 0($t0)
+	beq	$a0, $t0, READ_COMMAND_BUF_END
+	# buf[len] = a0
 	add	$t0, $t0, $t1
 	sw	$a0, 0($t0)
 	# len++
