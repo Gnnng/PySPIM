@@ -90,8 +90,6 @@ INT01_STATE_1:
 	addi	$t2, $zero, 2
 	la	$t1, Typing_State
 	sw	$t2, 0($t1)
-	#$a0 == \0
-	add	$a0, $zero, $zero
 	j	INT01_SERVICE_END
 INT01_STATE_1_EXEC:
 	#turn to ZB code
@@ -105,8 +103,6 @@ INT01_STATE_2:
 	addi	$t2, $zero, 0
 	la	$t1, Typing_State
 	sw	$t2, 0($t1)
-	#$a0 == \0
-	add	$a0, $zero, $zero
 	j	INT01_SERVICE_END
 INT01_SERVICE_END:
 	#return
@@ -140,8 +136,8 @@ INT08_PRINT_STRING:
 	push	$ra, $v0, $a0, $a1, $t0, $t1
 	#mov $t0, $a0
 	add	$t0, $a0, $zero
-	sll	$a1, $a1, 16
-	add	$t1, $zero, $a1
+	#sll	$a1, $a1, 16
+	#add	$t1, $zero, $a1
 PRINT_STRING_LOOP:
 	#here add load byte
 	#$a0 is address
@@ -150,12 +146,13 @@ PRINT_STRING_LOOP:
 	add	$a0, $v0, $zero
 	add	$a0, $a0, $a1
 	#load byte end
-	beq	$a0, $t1, PRINT_STRING_END_LOOP
+	#beq	$a0, $t1, PRINT_STRING_END_LOOP
+	beq	$a0, $zero, PRINT_STRING_END_LOOP
 	jal	INT08_PRINT_CHAR
 	addi	$t0, $t0, 1
 	j	PRINT_STRING_LOOP
 PRINT_STRING_END_LOOP:
-	pop	$ra, $v0, $a0, $a1, $t0
+	pop	$ra, $v0, $a0, $a1, $t0, $t1
 	#return
 	jr	$ra
 INT08_PRINT_CHAR:
@@ -263,21 +260,22 @@ INT08_READ_CHAR_LOOP_END:
 KERNEL_INIT:
 DEAD_LOOP:
 	la	$a0, _DIR
-	addi	$a1, $zero, 7
+	#addi	$a1, $zero, 7
 	addi	$v0, $zero, 4
 	syscall
 	la	$a0, _ARROW
-	addi	$a1, $zero, 7
+	#addi	$a1, $zero, 7
 	addi	$v0, $zero, 4
 	syscall
 DEAD_LOOP_2:
 	addi	$v0, $zero, 12
 	syscall
-	li	$a0, 0x00070000
-	add	$a0, $a0, $v0
+	#li	$a0, 0x00070000
+	#add	$a0, $a0, $v0
+	add	$a0, $zero, $v0
 	addi	$v0, $zero, 11
 	syscall
-	li	$t0, 0x0007000A
+	li	$t0, 0x0000000A
 	bne	$a0, $t0, DEAD_LOOP_2
 	j	DEAD_LOOP
 #========global functions========#
@@ -304,10 +302,9 @@ Load_Byte_End:
 SHOW_CHAR:
 	#a0 ascii, a1 X, a2 Y
 	push	$ra, $a0, $t0 
-	# sll	$a0, $a0, 3
 	#offset
-	#li	$t0, 0x00020000
-	#or 	$a0, $a0, $t0
+	li	$t0, 0x00070000
+	or 	$a0, $a0, $t0
 	jal	GET_VRAM_ADDR
 	add	$t0, $zero, $v0
 	#save word
