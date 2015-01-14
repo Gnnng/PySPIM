@@ -303,18 +303,18 @@ Load_Byte_End:
 #========Save_Byte========#
 Save_Byte:
 	push	$ra, $a0, $a1, $t0, $t1, $t2, $t3, $t4
-	# a0 - addres of byte, a1 - data
-	andi 	$a1, $a1, 0x00ff
-	andi 	$t2, $a0, 0x0003
-	srl 	$t0, $a0, 2
-	sub 	$a0, $a0, $t2
-	lw	$t1, 0($a0)
+	# a1 - addres of byte, a0 - data
+	andi 	$a0, $a0, 0x00ff
+	andi 	$t2, $a1, 0x0003
+	srl 	$t0, $a1, 2
+	sub 	$a1, $a1, $t2
+	lw	$t1, 0($a1)
 	sub 	$t2, $zero, $t2
 	addi 	$t2, $t2, 3
 	addi 	$t3, $zero, 0x00ff 		# t3 - mask
 Save_Byte_loop:
 	beq 	$t2, $zero, Save_Byte_end
-	sll 	$a1, $a1, 8
+	sll 	$a0, $a0, 8
 	sll 	$t3, $t3, 8
 	addi 	$t2, $t2, -1
 	j	Save_Byte_loop
@@ -323,7 +323,7 @@ Save_Byte_end:
 	sub	$t4, $t4, $t3
 	and 	$t1, $t1, $t4 
 	or	$t1, $t1, $a1
-	sw 	$t1, 0($a0)
+	sw 	$t1, 0($a1)
 	pop	$ra, $a0, $a1, $t0, $t1, $t2, $t3, $t4
 	jr	$ra
 #========SHOW_CHAR========#
