@@ -277,6 +277,8 @@ DEAD_LOOP:
 DEAD_LOOP_2:
 	jal	READ_COMMAND_BUF
 	jal	EXEC_COMMAND
+	la	$t0, COMMAND_LEN
+	sw	$zero, 0($t0)
 	j	DEAD_LOOP
 #========global functions========#
 #========Load_Byte========#
