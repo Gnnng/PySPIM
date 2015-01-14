@@ -679,7 +679,12 @@ READ_COMMAND_BUF_ENTER:
 	la	$t0, COMMAND_BUF
 	add	$t0, $t0, $t1
 	sw	$zero, 0($t0)
+	addi	$v0, $zero, 11
+	syscall
 READ_COMMAND_BUF_END:
+	addi	$v0, $zero, 4
+	la	$a0, COMMAND_BUF
+	syscall
 	pop	$ra, $a0, $a1, $t0, $t1, $s0
 	jr	$ra
 #=====EXEC_COMMAND=====#
