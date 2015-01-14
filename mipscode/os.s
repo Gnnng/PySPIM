@@ -54,6 +54,8 @@ INT01_SERVICE: #Keyboard interrupt
 	#load scanning code
 	li	$t0, 0xffff0100
 	lw	$t0, 0($t0)
+	add	$a0, $t0, $zero
+	andi	$a0, $a0, 0xff
 	#it will be a state machine
 	#0 represents no input
 	#1 represents input
@@ -68,10 +70,7 @@ INT01_SERVICE: #Keyboard interrupt
 	addi	$t2, $zero, 2
 	beq	$t1, $t2, INT01_STATE_2
 INT01_STATE_0:
-	add	$a0, $t0, $zero
 	#Domain_Word = $a0
-	la	$t1, Domain_Word
-	sw	$a0, 0($t1)
 	#Typing_State = 1 
 	addi	$t2, $zero, 1
 	la	$t1, Typing_State
@@ -82,7 +81,6 @@ INT01_STATE_0:
 	jal	PUT_INTO_KEYBOARD_BUF
 	j	INT01_SERVICE_END
 INT01_STATE_1:
-	add	$a0, $t0, $zero
 	#if $a0 == f0
 	addi	$t0, $zero, 0xf0
 	bne	$a0, $t0, INT01_STATE_1_EXEC
@@ -98,7 +96,6 @@ INT01_STATE_1_EXEC:
 	jal	PUT_INTO_KEYBOARD_BUF
 	j	INT01_SERVICE_END
 INT01_STATE_2:
-	add	$a0, $t0, $zero
 	#Typing_State = 2
 	addi	$t2, $zero, 0
 	la	$t1, Typing_State
