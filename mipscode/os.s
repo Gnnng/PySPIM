@@ -5,8 +5,9 @@
 #############################
 .text 0x00000000
 #interrupt address initialization
-	jal	SYS_INIT
+	j	SYS_INIT
 #jump to kernel initialization
+SYS_INIT_BACK:
 	j	KERNEL_INIT
 .text 0x00000080
 #interrupt handler
@@ -129,6 +130,8 @@ INT08_PRINT_STRING:
 	push	$ra, $v0, $a0, $a1, $t0, $t1
 	#mov $t0, $a0
 	add	$t0, $a0, $zero
+	li 	 	$v1, 0xffff0200
+	sw 		$a0, 0($v1)
 	#sll	$a1, $a1, 16
 	#add	$t1, $zero, $a1
 PRINT_STRING_LOOP:
@@ -137,7 +140,7 @@ PRINT_STRING_LOOP:
 	add	$a0, $t0, $zero
 	jal	Load_Byte
 	add	$a0, $v0, $zero
-	add	$a0, $a0, $a1
+	#add	$a0, $a0, $a1
 	#load byte end
 	#beq	$a0, $t1, PRINT_STRING_END_LOOP
 	beq	$a0, $zero, PRINT_STRING_END_LOOP
@@ -232,13 +235,14 @@ INT08_READ_CHAR_LOOP_END:
 	pop	$ra, $t0, $t1
 	jr 	$ra
 .data 0x00000900
+	_LIST_RESULT:	.asciiz "list root\n"
 	WEIGHT:	.word	40
 	HEIGHT:	.word	30
 	hi:	.asciiz	"Hello World\n"
 	_DIR:	.asciiz "root"
 	_ARROW:	.asciiz ">"
 	_LIST:	.asciiz "ls"
-	_LIST_RESULT:	.asciiz "list root\n"
+	_LIST2: .asciiz "ls"
 	KeyBoard_buf:	.word	0
 			.word	0
 			.word	0
@@ -313,8 +317,8 @@ Save_Byte:
 	addi	$t2, $zero, 0xff
 Save_Byte_loop:
 	beq	$t0, $zero, Save_Byte_end
-	srl	$t2, $t2, 8
-	srl	$a0, $a0, 8
+	sll	$t2, $t2, 8
+	sll	$a0, $a0, 8
 	addi	$t0, $t0, -1
 	j	Save_Byte_loop
 Save_Byte_end:
@@ -615,9 +619,6 @@ GET_FROM_KEYBOARD_BUF_END:
 	jr	$ra
 #========SYS_INIT========#
 SYS_INIT:
-	li 	$sp, 0x1ffc
-	li	$t0, 0x80000000
-	mtc0	$11, $t0
 	#int00
 	la	$t0, int01
 	la	$t1, INT01_SERVICE
@@ -626,8 +627,11 @@ SYS_INIT:
 	la	$t0, int08
 	la	$t1, INT08_SERVICE
 	sw	$t1, 0($t0)
-	j	KERNEL_INIT
-	jr	$ra
+
+	li 	$sp, 0x3ffc
+	li	$t0, 0x80000000
+	mtc0	$11, $t0
+	j 	SYS_INIT_BACK
 #=====COMPARE_STRING=====#
 COMPARE_STRING:
 	push	$ra, $a0, $a1, $t0, $t1, $s0, $s1, $t2
@@ -727,10 +731,14 @@ READ_COMMAND_BUF_END:
 #=====EXEC_COMMAND=====#
 EXEC_COMMAND:
 	push	$ra, $a0, $a1
+	la 	$a0, COMMAND_BUF
+	li 	$v0, 4
+	syscall
 	# compare
 	la	$a0, COMMAND_BUF
 	la	$a1, _LIST
-	jal	COMPARE_STRING
+	jal str_compare
+	# jal	strcmp
 	# if !compare return 0
 	beq	$v0, $zero, EXEC_COMMAND_END
 	# print result
@@ -741,4 +749,41 @@ EXEC_COMMAND_END:
 	pop	$ra, $a0, $a1
 	jr	$ra
 
-
+str_compare:
+	push $t0, $t1, $t2, $t3, $t4, $t5
+	addi $t1,$zero,0
+	fat_judge_str:
+		add $t3,$a0,$t1
+		lw $t0,0($t3)
+		add $t3,$a1,$t1
+		lw $t2,0($t3)
+		li $t5,0xFF000000
+		and $t3,$t0,$t5
+		and $t4,$t2,$t5
+		bne $t3,$t4,fat_not_equal_str
+		beq $t3,$zero,fat_equal_str
+		li $t5,0x00FF0000
+		and $t3,$t0,$t5
+		and $t4,$t2,$t5
+		bne $t3,$t4,fat_not_equal_str
+		beq $t3,$zero,fat_equal_str
+		li $t5,0x0000FF00
+		and $t3,$t0,$t5
+		and $t4,$t2,$t5
+		bne $t3,$t4,fat_not_equal_str
+		beq $t3,$zero,fat_equal_str
+		li $t5,0x000000FF
+		and $t3,$t0,$t5
+		and $t4,$t2,$t5
+		bne $t3,$t4,fat_not_equal_str
+		beq $t3,$zero,fat_equal_str
+		addi $t1,$t1,4
+		j fat_judge_str
+	fat_not_equal_str:
+		addi $v0,$zero,0
+		pop $t0, $t1, $t2, $t3, $t4, $t5
+		jr $ra
+	fat_equal_str:
+		addi $v0,$zero,1
+		pop $t0, $t1, $t2, $t3, $t4, $t5
+		jr $ra
