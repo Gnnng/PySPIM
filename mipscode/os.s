@@ -300,6 +300,32 @@ Load_Byte_End:
 	andi	$v0, $t1, 0xff
 	pop	$ra, $a0, $t0, $t1
 	jr	$ra
+#========Save_Byte========#
+Save_Byte:
+	push	$ra, $a0, $a1, $t0, $t1, $t2, $t3, $t4
+	# a0 - addres of byte, a1 - data
+	andi 	$a1, $a1, 0x00ff
+	andi 	$t2, $a0, 0x0003
+	srl 	$t0, $a0, 2
+	sub 	$a0, $a0, $t2
+	lw	$t1, 0($a0)
+	sub 	$t2, $zero, $t2
+	addi 	$t2, $t2, 3
+	addi 	$t3, $zero, 0x00ff 		# t3 - mask
+Save_Byte_loop:
+	beq 	$t2, $zero, Save_Byte_end
+	sll 	$a1, $a1, 8
+	sll 	$t3, $t3, 8
+	addi 	$t2, $t2, -1
+	j	Save_Byte_loop
+Save_Byte_end:
+	addi	$t4, $zero, -1
+	sub	$t4, $t4, $t3
+	and 	$t1, $t1, $t4 
+	or	$t1, $t1, $a1
+	sw 	$t1, 0($a0)
+	pop	$ra, $a0, $a1, $t0, $t1, $t2, $t3, $t4
+	jr	$ra
 #========SHOW_CHAR========#
 SHOW_CHAR:
 	#a0 ascii, a1 X, a2 Y
@@ -606,22 +632,29 @@ SYS_INIT:
 	jr	$ra
 #=====COMPARE_STRING=====#
 COMPARE_STRING:
-	push	$ra, $a0, $a1, $t0, $t1
+	push	$ra, $a0, $a1, $t0, $t1, $s0, $s1
+	add	$s0, $a0, $zero
+	add	$s1, $a1, $zero
 	addi	$v0, $zero, 1
 COMPARE_STRING_LOOP:
-	lw	$t0, 0($a0)
-	lw	$t1, 0($a1)
+	#read string 1
+	add	$a0, $zero, $s0
+	jal	Load_Byte
+	add	$t0, $v0, $zero
+	#read  string 2
+	add	$a0, $zero, $s1
+	jal	Load_Byte
+	add	$t1, $v0, $zero
+	#compare
 	bne	$t0, $t1, NOT_EQUAL
+	#break
 	beq	$t0, $zero, COMPARE_STRING_LOOP_END
 	beq	$t1, $zero, COMPARE_STRING_LOOP_END
-	addi	$a0, $a0, 1
-	addi	$a1, $a1, 1
 	j	COMPARE_STRING_LOOP
 NOT_EQUAL:
 	add	$v0, $zero, $zero
-	j	COMPARE_STRING_LOOP_END
 COMPARE_STRING_LOOP_END:
-	push	$ra, $a0, $a1, $t0, $t1
+	push	$ra, $a0, $a1, $t0, $t1, $s0, $s1
 	jr	$ra
 #=====READ_COMMAND_BUF=====#
 READ_COMMAND_BUF:
@@ -639,10 +672,9 @@ READ_COMMAND_BUF_LOOP:
 	lw	$s0, 0($t1)
 	beq	$s0, $zero, READ_COMMAND_BUF_LOOP
 	# buf[len] = 0;
-	sll	$t1, $s0, 2
-	la	$t0, COMMAND_BUF
-	add	$t0, $t0, $t1
-	sw	$zero, 0($t0)
+	la	$a1, COMMAND_BUF
+	add	$a1, $a1, $s0
+	jal	Save_Byte
 	# len--;
 	addi	$s0, $s0, -1
 	la	$t1, COMMAND_LEN
@@ -655,16 +687,15 @@ READ_COMMAND_BUF_READ:
 	#if len==8, loop
 	la	$t1, COMMAND_LEN
 	lw	$s0, 0($t1)
-	addi	$t1, $zero, 8
+	addi	$t1, $zero, 32
 	beq	$s0, $t1, READ_COMMAND_BUF_LOOP
 	#if a0 = enter
 	addi	$t0, $zero, 10
 	beq	$a0, $t0, READ_COMMAND_BUF_ENTER
 	# buf[len] = a0
-	sll	$t1, $s0, 2
-	la	$t0, COMMAND_BUF
-	add	$t0, $t0, $t1
-	sw	$a0, 0($t0)
+	la	$a1, COMMAND_BUF
+	add	$a1, $a1, $s0
+	jal	Save_Byte
 	# len++
 	addi	$s0, $s0, 1
 	la	$t1, COMMAND_LEN
@@ -675,10 +706,12 @@ READ_COMMAND_BUF_READ:
 	j	READ_COMMAND_BUF_LOOP
 READ_COMMAND_BUF_ENTER:
 	#buf[len] = 0
-	sll	$t1, $s0, 2
-	la	$t0, COMMAND_BUF
-	add	$t0, $t0, $t1
-	sw	$zero, 0($t0)
+	la	$a1, COMMAND_BUF
+	add	$a1, $a1, $s0
+	add	$a0, $zero, $zero
+	jal	Save_Byte
+	#print char
+	addi	$a0, $zero, 10
 	addi	$v0, $zero, 11
 	syscall
 READ_COMMAND_BUF_END:
