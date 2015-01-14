@@ -266,11 +266,9 @@ INT08_READ_CHAR_LOOP_END:
 KERNEL_INIT:
 DEAD_LOOP:
 	la	$a0, _DIR
-	#addi	$a1, $zero, 7
 	addi	$v0, $zero, 4
 	syscall
 	la	$a0, _ARROW
-	#addi	$a1, $zero, 7
 	addi	$v0, $zero, 4
 	syscall
 	add	$t1, $zero, $zero
@@ -304,26 +302,26 @@ Load_Byte_End:
 Save_Byte:
 	push	$ra, $a0, $a1, $t0, $t1, $t2, $t3, $t4
 	# a1 - addres of byte, a0 - data
-	andi 	$a0, $a0, 0x00ff
-	andi 	$t2, $a1, 0x0003
-	srl 	$t0, $a1, 2
-	sub 	$a1, $a1, $t2
+	andi 	$a0, $a0, 0xff
+	#offset t0
+	andi	$t0, $a1, 0x3
+	addi	$t0, $t0, -3
+	sub	$t0, $zero, $t0
+	#word t1
 	lw	$t1, 0($a1)
-	sub 	$t2, $zero, $t2
-	addi 	$t2, $t2, 3
-	addi 	$t3, $zero, 0x00ff 		# t3 - mask
+	add	$v0, $zero, $zero
+	addi	$t2, $zero, 0xff
 Save_Byte_loop:
-	beq 	$t2, $zero, Save_Byte_end
-	sll 	$a0, $a0, 8
-	sll 	$t3, $t3, 8
-	addi 	$t2, $t2, -1
+	beq	$t0, $zero, Save_Byte_end
+	srl	$t2, $t2, 8
+	srl	$a0, $a0, 8
+	addi	$t0, $t0, -1
 	j	Save_Byte_loop
 Save_Byte_end:
-	addi	$t4, $zero, -1
-	sub	$t4, $t4, $t3
-	and 	$t1, $t1, $t4 
-	or	$t1, $t1, $a1
-	sw 	$t1, 0($a1)
+	li	$t3, 0xffffffff
+	xor	$t2, $t2, $t3
+	and	$v0, $t2, $t1
+	or	$v0, $a0, $v0
 	pop	$ra, $a0, $a1, $t0, $t1, $t2, $t3, $t4
 	jr	$ra
 #========SHOW_CHAR========#
@@ -658,48 +656,50 @@ COMPARE_STRING_LOOP_END:
 	jr	$ra
 #=====READ_COMMAND_BUF=====#
 READ_COMMAND_BUF:
-	push	$ra, $a0, $a1, $t0, $t1, $s0
+	push	$ra, $a0, $a1, $t0, $t1, $s0, $s1
 READ_COMMAND_BUF_LOOP:
 	# read keyboard hit
 	addi	$v0, $zero, 12
 	syscall
-	add	$a0, $v0, $zero
-	# if a0 = backspace
-	addi	$t0, $zero, 8
-	bne	$a0, $t0, READ_COMMAND_BUF_READ
-	#if command_len == 0, loop
+	# s0 = get_char, s1 = buf_len
+	add	$s0, $v0, $zero
 	la	$t1, COMMAND_LEN
-	lw	$s0, 0($t1)
-	beq	$s0, $zero, READ_COMMAND_BUF_LOOP
+	lw	$s1, 0($t1)
+	# if s0 != backspace
+	addi	$t0, $zero, 8
+	bne	$s0, $t0, READ_COMMAND_BUF_READ
+	#if command_len == 0, loop
+	beq	$s1, $zero, READ_COMMAND_BUF_LOOP
 	# buf[len] = 0;
 	la	$a1, COMMAND_BUF
-	add	$a1, $a1, $s0
+	add	$a1, $a1, $s1
+	add	$a0, $zero, $zero
 	jal	Save_Byte
 	# len--;
-	addi	$s0, $s0, -1
+	addi	$s1, $s1, -1
 	la	$t1, COMMAND_LEN
-	sw	$s0, 0($t1)
+	sw	$s1, 0($t1)
 	# print char
+	add	$a0, $s0, $zero
 	addi	$v0, $zero, 11
 	syscall
 	j	READ_COMMAND_BUF_LOOP
 READ_COMMAND_BUF_READ:
 	#if len==8, loop
-	la	$t1, COMMAND_LEN
-	lw	$s0, 0($t1)
 	addi	$t1, $zero, 32
-	beq	$s0, $t1, READ_COMMAND_BUF_LOOP
+	beq	$s1, $t1, READ_COMMAND_BUF_LOOP
 	#if a0 = enter
 	addi	$t0, $zero, 10
-	beq	$a0, $t0, READ_COMMAND_BUF_ENTER
+	beq	$s0, $t0, READ_COMMAND_BUF_ENTER
 	# buf[len] = a0
+	add	$a0, $s0, $zero
 	la	$a1, COMMAND_BUF
-	add	$a1, $a1, $s0
+	add	$a1, $a1, $s1
 	jal	Save_Byte
 	# len++
-	addi	$s0, $s0, 1
+	addi	$s1, $s1, 1
 	la	$t1, COMMAND_LEN
-	sw	$s0, 0($t1)
+	sw	$s1, 0($t1)
 	# print char
 	addi	$v0, $zero, 11
 	syscall
@@ -718,7 +718,7 @@ READ_COMMAND_BUF_END:
 	addi	$v0, $zero, 4
 	la	$a0, COMMAND_BUF
 	syscall
-	pop	$ra, $a0, $a1, $t0, $t1, $s0
+	pop	$ra, $a0, $a1, $t0, $t1, $s0, $s1
 	jr	$ra
 #=====EXEC_COMMAND=====#
 EXEC_COMMAND:
