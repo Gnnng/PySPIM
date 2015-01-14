@@ -630,10 +630,11 @@ SYS_INIT:
 	jr	$ra
 #=====COMPARE_STRING=====#
 COMPARE_STRING:
-	push	$ra, $a0, $a1, $t0, $t1, $s0, $s1
+	push	$ra, $a0, $a1, $t0, $t1, $s0, $s1, $t2
 	add	$s0, $a0, $zero
 	add	$s1, $a1, $zero
-	addi	$v0, $zero, 1
+	#ans
+	addi	$t2, $zero, 1
 COMPARE_STRING_LOOP:
 	#read string 1
 	add	$a0, $zero, $s0
@@ -648,11 +649,14 @@ COMPARE_STRING_LOOP:
 	#break
 	beq	$t0, $zero, COMPARE_STRING_LOOP_END
 	beq	$t1, $zero, COMPARE_STRING_LOOP_END
+	addi	$s0, $s0, 1
+	addi	$s1, $s1, 1
 	j	COMPARE_STRING_LOOP
 NOT_EQUAL:
-	add	$v0, $zero, $zero
+	add	$t2, $zero, $zero
 COMPARE_STRING_LOOP_END:
-	push	$ra, $a0, $a1, $t0, $t1, $s0, $s1
+	add	$v0, $zero, $t2
+	push	$ra, $a0, $a1, $t0, $t1, $s0, $s1, $t2
 	jr	$ra
 #=====READ_COMMAND_BUF=====#
 READ_COMMAND_BUF:
@@ -685,7 +689,7 @@ READ_COMMAND_BUF_LOOP:
 	syscall
 	j	READ_COMMAND_BUF_LOOP
 READ_COMMAND_BUF_READ:
-	#if len==8, loop
+	#if len==32, loop
 	addi	$t1, $zero, 32
 	beq	$s1, $t1, READ_COMMAND_BUF_LOOP
 	#if a0 = enter
@@ -715,9 +719,9 @@ READ_COMMAND_BUF_ENTER:
 	addi	$v0, $zero, 11
 	syscall
 READ_COMMAND_BUF_END:
-	addi	$v0, $zero, 4
-	la	$a0, COMMAND_BUF
-	syscall
+	#addi	$v0, $zero, 4
+	#la	$a0, COMMAND_BUF
+	#syscall
 	pop	$ra, $a0, $a1, $t0, $t1, $s0, $s1
 	jr	$ra
 #=====EXEC_COMMAND=====#
