@@ -5,17 +5,7 @@
 #############################
 .text 0x00000000
 #interrupt address initialization
-	li  $sp, 0x1ffc
-	li          $t0, 0x80000000
-	mtc0        $11, $t0
-	#int00
-	la	$t0, int01
-	la	$t1, INT01_SERVICE
-	sw	$t1, 0($t0)
-	#int08
-	la	$t0, int08
-	la	$t1, INT08_SERVICE
-	sw	$t1, 0($t0)
+	jal	SYS_INIT
 #jump to kernel initialization
 	j	KERNEL_INIT
 .text 0x00000080
@@ -23,12 +13,9 @@
 INT_HANDLER:
 	#use $k0, $k1
 	#$12: Status, $13: Cause, $14: EPC
-	push $ra, $k0
-	mfc0 $14, $k0
-	push $k0
-	# jal 	INT_UNABLE
-	#addi	$sp, $sp, -4
-	#sw	$ra, 0($sp)
+	push	$ra, $k0
+	mfc0	$14, $k0
+	push	$k0
 	#Status 2~6 bit represents interrupt value
 	mfc0	$13, $k0 #$12: Status
 	sll     $k0, $k0, 2
@@ -37,11 +24,9 @@ INT_HANDLER:
 	lw	$k0, 0($k0)	 #get the address
 	jalr	$k0, $ra
 	# jal 	INT_ENABLE
-	pop $k0
-	mtc0 $14, $k0
+	pop	$k0
+	mtc0	$14, $k0
 	pop	$ra, $k0
-	#lw 	$ra, 0($sp)
-	#addi 	$sp, $sp, 4
 	eret
 .data 0x00000100
 #interrupt vector table
@@ -56,6 +41,10 @@ INT_HANDLER:
 		.word 	0
 	int08:	.word	0 #syscall
 		.word 	0
+	int01_state0	.word	0
+	int01_state1	.word	0
+	int01_state2	.word	0
+	int01_state3	.word	0
 .text 0x00000200
 #interrupt services
 INT_SERVICES:
@@ -63,91 +52,119 @@ INT01_SERVICE: #Keyboard interrupt
 	#keyboard hit
 	push	$ra, $t0, $t1, $t2, $a0
 	#load scanning code
-	li  $t0, 0xffff0100
+	li	$t0, 0xffff0100
 	lw	$t0, 0($t0)
-	#if t0!= F0
-	#put ZBCode into the buffer
-	addi	$t1, $zero, 0xf0
-	beq	$t0, $t1, INT01_SERVICE_END
+	#it will be a state machine
+	#0 represents no input
+	#1 represents input
+	#2 represents f0
+	#$t1 = State
+	la	$t1, Typing_State
+	lw	$t1, 0($t1)
+	sll	$t1, $t1, 2
+	#$t2 + State = State[$t1]
+	la	$t2, int01_state0
+	addi	$t2, $t2, $t1
+	lw	$t2, 0($t2)
+INT01_STATE_0:
 	add	$a0, $t0, $zero
-	andi	$a0, $a0, 0xff
+	#Domain_Word = $a0
+	la	$t1, Domain_Word
+	sw	$a0, 0($t1)
+	#Typing_State = 1 
+	addi	$t2, $zero, 1
+	la	$t1, Typing_State
+	sw	$t2, 0($t1)
+	#turn to ZB code
 	jal	GET_ZB_CODE
 	add	$a0, $v0, $zero
+	jal	PUT_INTO_KEYBOARD_BUF
+	j	INT01_SERVICE_END
+INT01_STATE_1:
+	add	$a0, $t0, $zero
+	#if $a0 == f0
+	addi	$t0, $zero, 0xf0
+	bne	$a0, $f0, INT01_STATE_1_EXEC
+	#Typing_State = 2
+	addi	$t2, $zero, 2
+	la	$t1, Typing_State
+	sw	$t2, 0($t1)
+	#$a0 == \0
+	add	$a0, $zero, $zero
+	j	INT01_SERVICE_END
+INT01_STATE_1_EXEC:
+	#turn to ZB code
+	jal	GET_ZB_CODE
+	add	$a0, $v0, $zero
+	jal	PUT_INTO_KEYBOARD_BUF
+	j	INT01_SERVICE_END
+INT01_STATE_2:
+	add	$a0, $t0, $zero
+	#Typing_State = 2
+	addi	$t2, $zero, 0
+	la	$t1, Typing_State
+	sw	$t2, 0($t1)
+	#$a0 == \0
+	add	$a0, $zero, $zero
+	j	INT01_SERVICE_END
+	#put ZBCode into the buffer
+	#addi	$t1, $zero, 0xf0
+	#beq	$t0, $t1, INT01_SERVICE_END
+	#add	$a0, $t0, $zero
+	#andi	$a0, $a0, 0xff
+	#jal	GET_ZB_CODE
+	#add	$a0, $v0, $zero
 	#li 	$a0, 0x61
 	#jal	INT08_PRINT_CHAR
-	jal	PUT_INTO_KEYBOARD_BUF
+	#jal	PUT_INTO_KEYBOARD_BUF
 INT01_SERVICE_END:
 	#return
 	pop	$ra, $t0, $t1, $t2, $a0
 	jr	$ra
 INT08_SERVICE:
 	# #syscall
-	# mfc0	$11, $k0
-	# mfc0	$12, $k1
-	# push	$k0
-	# push 	$k1
-	# mfc0	$13, $k1
-	# push	$k1
-	# mfc0	$14, $k1
-	# push	$k1
-	# mfc0	$15, $k1
-	# push	$k1
 	push $ra, $a0, $t0
 	#since read char is returned in $v0, so we shouldn't push $v0
+INT08_JUMP_PRINT_STRING:
 	#print_string
 	addi	$t0, $zero, 4
-	beq	$v0, $t0, INT08_JUMP_PRINT_STRING
+	bne	$v0, $t0, INT08_JUMP_PRINT_CHAR
+	jal 	INT08_PRINT_STRING
+INT08_JUMP_PRINT_CHAR:
 	#print_char
 	addi	$t0, $zero, 11
-	beq	$v0, $t0, INT08_JUMP_PRINT_CHAR
+	bne	$v0, $t0, INT08_JUMP_READ_CHAR
+	jal 	INT08_PRINT_CHAR
+INT08_JUMP_READ_CHAR:
 	#read_char
 	addi	$t0, $zero, 12
-	beq	$v0, $t0, INT08_JUMP_READ_CHAR
-	
-	j 		INT08_SERVICE_END
-
-INT08_JUMP_PRINT_STRING:
-	jal 	INT08_PRINT_STRING
-	j 		INT08_SERVICE_END
-
-INT08_JUMP_PRINT_CHAR:
-	jal 	INT08_PRINT_CHAR
-	j 		INT08_SERVICE_END
-
-INT08_JUMP_READ_CHAR:
+	bne	$v0, $t0, INT08_SERVICE_END
 	jal 	INT08_READ_CHAR
-	j 		INT08_SERVICE_END
-
 INT08_SERVICE_END:
 	#return
-	# pop	$k0, $k1
-	# mtc0	$15, $k0
-	# mtc0	$14, $k1
-	# pop	$k0, $k1
-	# mfc0	$13, $k0
-	# mfc0	$12, $k1
-	# pop	$k1
-	# mfc0	$11, $k1
-	pop $ra, $a0, $t0
+	pop	$ra, $a0, $t0
 	jr	$ra
 INT08_PRINT_STRING:
 	#syscall print string
-	push	$ra, $v0, $a0, $t0
+	push	$ra, $v0, $a0, $a1, $t0, $t1
 	#mov $t0, $a0
 	add	$t0, $a0, $zero
+	sll	$a1, $a1, 16
+	addi	$t1, $zero, $a1
 PRINT_STRING_LOOP:
 	#here add load byte
 	#$a0 is address
 	add	$a0, $t0, $zero
 	jal	Load_Byte
 	add	$a0, $v0, $zero
+	add	$a0, $a0, $a1
 	#load byte end
-	beq	$a0, $zero, PRINT_STRING_END_LOOP
+	beq	$a0, $t1, PRINT_STRING_END_LOOP
 	jal	INT08_PRINT_CHAR
 	addi	$t0, $t0, 1
 	j	PRINT_STRING_LOOP
 PRINT_STRING_END_LOOP:
-	pop	$ra, $v0, $a0, $t0
+	pop	$ra, $v0, $a0, $a1, $t0
 	#return
 	jr	$ra
 INT08_PRINT_CHAR:
@@ -157,6 +174,8 @@ INT08_PRINT_CHAR:
 	lui	$t0, 0xffff
 	lw	$a1, 0($t0) #X
 	lw	$a2, 4($t0) #Y
+	#if a0 = \0
+	beq	$a0, $zero, INT08_PRINT_CHAR_END
 	#if a0 = enter
 	addi	$t1, $zero, 10
 	bne	$a0, $t1, INT08_PRINT_CHAR_EXEC
@@ -234,6 +253,8 @@ INT08_READ_CHAR_LOOP_END:
 	WEIGHT:	.word	40
 	HEIGHT:	.word	30
 	hi:	.asciiz	"Hello World\n"
+	_DIR:	.asciiz "root"
+	_ARROW:	.asciiz ">"
 	KeyBoard_buf:	.word	0
 			.word	0
 			.word	0
@@ -244,36 +265,34 @@ INT08_READ_CHAR_LOOP_END:
 			.word	0
 	KeyBoard_head:	.word	0
 	KeyBoard_tail:	.word	0
+	Typing_State:	.word	0
+	Domain_Word:	.word	0
 .text 0x00001000
 #Kernel initialization begin
 KERNEL_INIT:
-
-# la $a0,test_file_name
-# la $a1,test_string
-# addi $a2,$zero,600
-# jal fat_write_file
-# la $a0,test_file_name
-# la $a1,get_string
-# jal  fat_read_file
-# 	addi	$v0, $zero, 4
-# 	la	$a0, get_string
-# 	syscall
-	
-	#addi $a0,$a0,512
-	li  $v0, 0x4
-	la  $a0, hi 
-	syscall 
 DEAD_LOOP:
-	addi 	$v0, $zero, 12
+	la	$a0, _DIR
+	addi	$a1, $zero, 7
+	addi	$v0, $zero, 4
 	syscall
-	add 	$a0, $zero, $v0
+	la	$a0, _ARROW
+	addi	$a1, $zero, 7
+	addi	$v0, $zero, 4
+	syscall
+DEAD_LOOP_2:
+	addi	$v0, $zero, 12
+	syscall
+	li	$a0, 0x00070000
+	addi	$a0, $a0, $v0
 	addi	$v0, $zero, 11
 	syscall
+	li	$t0, 0x0007000A
+	bne	$a0, $t0, DEAD_LOOP_2
 	j	DEAD_LOOP
 #========global functions========#
 #========Load_Byte========#
 Load_Byte:
-	push $ra, $a0, $t0, $t1
+	push	$ra, $a0, $t0, $t1
 	#$t0 is the relative offset
 	andi	$t0, $a0, 3
 	addi	$t0, $t0, -3
@@ -296,8 +315,8 @@ SHOW_CHAR:
 	push	$ra, $a0, $t0 
 	# sll	$a0, $a0, 3
 	#offset
-	li   $t0, 0x00020000
-	or 	$a0, $a0, $t0
+	#li	$t0, 0x00020000
+	#or 	$a0, $a0, $t0
 	jal	GET_VRAM_ADDR
 	add	$t0, $zero, $v0
 	#save word
@@ -314,8 +333,8 @@ GET_VRAM_ADDR:
 	sll	$v0, $v0, 6
 	add	$v0, $v0, $a1
 	sll	$v0, $v0, 2
-	lui $t0, 0x1000 
-	or  $v0, $v0, $t0
+	lui	$t0, 0x1000 
+	or	$v0, $v0, $t0
 	# return $v0
 	pop	$ra, $a1, $a2, $t0
 	jr	$ra
@@ -531,16 +550,7 @@ GET_ZB_CODE:
 GET_ZB_CODE_END:
 	pop	$ra, $a0, $t0
 	jr	$ra
-#========READ_BREAK_CODE========#
-READ_BREAK_CODE:
-	push	$ra, $a0, $t0
-	jal	GET_FROM_KEYBOARD_BUF
-	add	$a0, $v0, $zero
-	jal	GET_ZB_CODE
-	#return
-	pop	$ra, $a0, $t0
-	jr	$ra
-#========READ_BREAK_CODE========#
+#========PUT_INTO_KEYBOARD_BUF========#
 PUT_INTO_KEYBOARD_BUF:
 	push	$ra, $a0, $t0, $t1, $t2
 	#main
@@ -564,11 +574,9 @@ PUT_INTO_KEYBOARD_BUF:
 	sw	$t0, 0($t1)
 PUT_INTO_KEYBOARD_BUF_END:
 	#return
-	addi	$a0, $zero, 61
-	#jal 	INT08_PRINT_CHAR
 	pop	$ra, $a0, $t0, $t1, $t2
 	jr	$ra
-#========READ_BREAK_CODE========#
+#========GET_FROM_KEYBOARD_BUF========#
 GET_FROM_KEYBOARD_BUF:
 	push	$ra, $t0, $t1, $t2
 	#if head=tail then buf is empty
@@ -588,8 +596,33 @@ GET_FROM_KEYBOARD_BUF:
 	la	$t1, KeyBoard_head
 	sw	$t0, 0($t1)
 GET_FROM_KEYBOARD_BUF_END:
-	#add 	$a0, $zero, $v0
-	#jal 	INT08_PRINT_CHAR
 	#return
 	pop	$ra, $t0, $t1, $t2
+	jr	$ra
+#========SYS_INIT========#
+SYS_INIT:
+	li 	$sp, 0x1ffc
+	li	$t0, 0x80000000
+	mtc0	$11, $t0
+	#int00
+	la	$t0, int01
+	la	$t1, INT01_SERVICE
+	sw	$t1, 0($t0)
+	#int08
+	la	$t0, int08
+	la	$t1, INT08_SERVICE
+	sw	$t1, 0($t0)
+	#int01_state0
+	la	$t0, int01_state0
+	la	$t1, INT01_STATE_0
+	sw	$t1, 0($t0)
+	#int01_state1
+	la	$t0, int01_state1
+	la	$t1, INT01_STATE_1
+	sw	$t1, 0($t0)
+	#int01_state2
+	la	$t0, int01_state2
+	la	$t1, INT01_STATE_2
+	sw	$t1, 0($t0)
+	j	KERNEL_INIT
 	jr	$ra
