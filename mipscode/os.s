@@ -41,10 +41,6 @@ INT_HANDLER:
 		.word 	0
 	int08:	.word	0 #syscall
 		.word 	0
-	int01_state0:	.word	0
-	int01_state1:	.word	0
-	int01_state2:	.word	0
-	int01_state3:	.word	0
 .text 0x00000200
 #interrupt services
 INT_SERVICES:
@@ -55,7 +51,7 @@ INT01_SERVICE: #Keyboard interrupt
 	li	$t0, 0xffff0100
 	lw	$t0, 0($t0)
 	add	$a0, $t0, $zero
-	andi	$a0, $a0, 0xff
+	andi	$a0, $a0, 0xff #highest bit is 1 !!!
 	#it will be a state machine
 	#0 represents no input
 	#1 represents input
@@ -255,7 +251,9 @@ INT08_READ_CHAR_LOOP_END:
 	KeyBoard_tail:	.word	0
 	Typing_State:	.word	0
 	Domain_Word:	.word	0
+	COMMAND_LEN:	.word	0
 	COMMAND_BUF:	.word	0
+			.word	0
 			.word	0
 			.word	0
 			.word	0
@@ -277,26 +275,8 @@ DEAD_LOOP:
 	syscall
 	add	$t1, $zero, $zero
 DEAD_LOOP_2:
-	addi	$v0, $zero, 12
-	syscall
-	add	$a0, $zero, $v0
-	la	$t0, COMMAND_BUF
-	add	$t0, $t0, $t1
-	sw	$a0, 0($t0)
-	addi	$v0, $zero, 11
-	syscall
-	li	$t0, 0x0000000A
-	addi	$t1, $t1, 4
-	bne	$a0, $t0, DEAD_LOOP_2
-	#if string == ls
-	la	$a0, COMMAND_BUF
-	la	$a1, _LIST
-	COMPARE_STRING
-	beq	$v0, $zero, DEAD_LOOP
-	#print list root
-	la	$a0, _LIST_RESULT
-	addi	$v0, $zero, 4
-	syscall
+	jal	READ_COMMAND_BUF
+	jal	EXEC_COMMAND
 	j	DEAD_LOOP
 #========global functions========#
 #========Load_Byte========#
@@ -620,18 +600,6 @@ SYS_INIT:
 	la	$t0, int08
 	la	$t1, INT08_SERVICE
 	sw	$t1, 0($t0)
-	#int01_state0
-	la	$t0, int01_state0
-	la	$t1, INT01_STATE_0
-	sw	$t1, 0($t0)
-	#int01_state1
-	la	$t0, int01_state1
-	la	$t1, INT01_STATE_1
-	sw	$t1, 0($t0)
-	#int01_state2
-	la	$t0, int01_state2
-	la	$t1, INT01_STATE_2
-	sw	$t1, 0($t0)
 	j	KERNEL_INIT
 	jr	$ra
 #=====COMPARE_STRING=====#
@@ -648,9 +616,79 @@ COMPARE_STRING_LOOP:
 	addi	$a1, $a1, 1
 	j	COMPARE_STRING_LOOP
 NOT_EQUAL:
-	addi	$v0, $zero, 0
+	add	$v0, $zero, $zero
 	j	COMPARE_STRING_LOOP_END
 COMPARE_STRING_LOOP_END:
 	push	$ra, $a0, $a1, $t0, $t1
 	jr	$ra
+#=====READ_COMMAND_BUF=====#
+READ_COMMAND_BUF:
+	push	$ra, $a0, $a1, $t0, $t1, $s0
+READ_COMMAND_BUF_LOOP:
+	# read keyboard hit
+	addi	$v0, $zero, 12
+	syscall
+	add	$a0, $v0, $zero
+	# if a0 = backspace
+	addi	$t0, $zero, 8
+	bne	$a0, $t0, READ_COMMAND_BUF_READ
+	#if command_len == 0, loop
+	la	$t1, COMMAND_LEN
+	lw	$s0, 0($t1)
+	beq	$s0, $zero, READ_COMMAND_BUF_LOOP
+	# buf[len] = 0;
+	sll	$t1, $s0, 2
+	la	$t0, COMMAND_BUF
+	add	$t0, $t0, $t1
+	sw	$zero, 0($t0)
+	# len--;
+	addi	$s0, $s0, -1
+	la	$t1, COMMAND_LEN
+	sw	$s0, 0($t1)
+	# print char
+	addi	$v0, $zero, 11
+	syscall
+	j	READ_COMMAND_BUF_LOOP
+READ_COMMAND_BUF_READ:
+	#if len==8, loop
+	la	$t1, COMMAND_LEN
+	lw	$s0, 0($t1)
+	addi	$t1, $zero, 8
+	beq	$s0, $t1, READ_COMMAND_BUF_LOOP
+	#if a0 = enter
+	addi	$t0, $zero, 10
+	beq	$a0, $t0, READ_COMMAND_BUF_END
+	# buf[len] = a0
+	sll	$t1, $s0, 2
+	la	$t0, COMMAND_BUF
+	add	$t0, $t0, $t1
+	sw	$a0, 0($t0)
+	# len++
+	addi	$s0, $s0, 1
+	la	$t1, COMMAND_LEN
+	sw	$s0, 0($t1)
+	# print char
+	addi	$v0, $zero, 11
+	syscall
+	j	READ_COMMAND_BUF_LOOP
+READ_COMMAND_BUF_END:
+	pop	$ra, $a0, $a1, $t0, $t1, $s0
+	jr	$ra
+#=====EXEC_COMMAND=====#
+EXEC_COMMAND:
+	push	$ra, $a0, $a1
+	# compare
+	la	$a0, COMMAND_BUF
+	la	$a1, _LIST
+	jal	COMPARE_STRING
+	# if !compare return 0
+	beq	$v0, $zero, EXEC_COMMAND_END
+	# print result
+	la	$a0, _LIST_RESULT
+	addi	$v0, $zero, 4
+	syscall
+EXEC_COMMAND_END:
+	pop	$ra, $a0, $a1
+	jr	$ra
+
 
