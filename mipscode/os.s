@@ -41,10 +41,10 @@ INT_HANDLER:
 		.word 	0
 	int08:	.word	0 #syscall
 		.word 	0
-	int01_state0	.word	0
-	int01_state1	.word	0
-	int01_state2	.word	0
-	int01_state3	.word	0
+	int01_state0:	.word	0
+	int01_state1:	.word	0
+	int01_state2:	.word	0
+	int01_state3:	.word	0
 .text 0x00000200
 #interrupt services
 INT_SERVICES:
@@ -64,7 +64,7 @@ INT01_SERVICE: #Keyboard interrupt
 	sll	$t1, $t1, 2
 	#$t2 + State = State[$t1]
 	la	$t2, int01_state0
-	addi	$t2, $t2, $t1
+	add	$t2, $t2, $t1
 	lw	$t2, 0($t2)
 INT01_STATE_0:
 	add	$a0, $t0, $zero
@@ -84,7 +84,7 @@ INT01_STATE_1:
 	add	$a0, $t0, $zero
 	#if $a0 == f0
 	addi	$t0, $zero, 0xf0
-	bne	$a0, $f0, INT01_STATE_1_EXEC
+	bne	$a0, $t0, INT01_STATE_1_EXEC
 	#Typing_State = 2
 	addi	$t2, $zero, 2
 	la	$t1, Typing_State
@@ -150,7 +150,7 @@ INT08_PRINT_STRING:
 	#mov $t0, $a0
 	add	$t0, $a0, $zero
 	sll	$a1, $a1, 16
-	addi	$t1, $zero, $a1
+	add	$t1, $zero, $a1
 PRINT_STRING_LOOP:
 	#here add load byte
 	#$a0 is address
@@ -283,7 +283,7 @@ DEAD_LOOP_2:
 	addi	$v0, $zero, 12
 	syscall
 	li	$a0, 0x00070000
-	addi	$a0, $a0, $v0
+	add	$a0, $a0, $v0
 	addi	$v0, $zero, 11
 	syscall
 	li	$t0, 0x0007000A
