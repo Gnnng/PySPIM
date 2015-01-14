@@ -281,6 +281,7 @@ DEAD_LOOP_2:
 	jal	EXEC_COMMAND
 	la	$t0, COMMAND_LEN
 	sw	$zero, 0($t0)
+	jal	CLEAR_COMMAND_BUF
 	j	DEAD_LOOP
 #========global functions========#
 #========Load_Byte========#
@@ -326,6 +327,7 @@ Save_Byte_end:
 	xor	$t2, $t2, $t3
 	and	$v0, $t2, $t1
 	or	$v0, $a0, $v0
+	sw	$v0, 0($a0)
 	pop	$ra, $a0, $a1, $t0, $t1, $t2, $t3, $t4
 	jr	$ra
 #========SHOW_CHAR========#
@@ -627,7 +629,6 @@ SYS_INIT:
 	la	$t0, int08
 	la	$t1, INT08_SERVICE
 	sw	$t1, 0($t0)
-
 	li 	$sp, 0x3ffc
 	li	$t0, 0x80000000
 	mtc0	$11, $t0
@@ -748,7 +749,20 @@ EXEC_COMMAND:
 EXEC_COMMAND_END:
 	pop	$ra, $a0, $a1
 	jr	$ra
-
+#=====CLEAR_COMMAND_BUF=====#	
+CLEAR_COMMAND_BUF:
+	push	$ra, $a0, $t0, $t1, $t2
+	add	$t0, $zero, $zero
+	li	$a0, COMMAND_BUF
+	li	$t2, 32
+CLEAR_COMMAND_BUF_LOOP:
+	add	$t1, $t0, $a0
+	sw	$zero, 0($t1)
+	addi	$t0, $t0, 4
+	bne	$t0, $t2, CLEAR_COMMAND_BUF_LOOP
+	pop	$ra, $a0, $t0
+	jr	$ra
+	
 str_compare:
 	push $t0, $t1, $t2, $t3, $t4, $t5
 	addi $t1,$zero,0
