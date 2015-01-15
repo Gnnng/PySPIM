@@ -754,10 +754,10 @@ READ_COMMAND_BUF_END:
 EXEC_COMMAND:
 	push	$ra, $a0, $a1
 	# compare
-	la	$a0, COMMAND_BUF
 EXEC_COMMAND_CMP_LS:
+	la	$a0, COMMAND_BUF
 	la	$a1, _LIST
-	jal str_compare
+	jal	str_compare
 	# if !compare return 0
 	beq	$v0, $zero, EXEC_COMMAND_CMP_EDIT
 	# print result
@@ -766,8 +766,9 @@ EXEC_COMMAND_CMP_LS:
 	syscall
 	j	EXEC_COMMAND_END
 EXEC_COMMAND_CMP_EDIT:
+	la	$a0, COMMAND_BUF
 	la	$a1, _EDIT
-	jal str_compare
+	jal	str_compare
 	# if !compare return 0
 	beq	$v0, $zero, EXEC_COMMAND_CMP_RUN
 	# print result
@@ -776,8 +777,9 @@ EXEC_COMMAND_CMP_EDIT:
 	syscall
 	j	EXEC_COMMAND_END
 EXEC_COMMAND_CMP_RUN:
+	la	$a0, COMMAND_BUF
 	la	$a1, _RUN
-	jal str_compare
+	jal	str_compare
 	# if !compare return 0
 	beq	$v0, $zero, EXEC_COMMAND_CHAT
 	# print result
@@ -786,8 +788,9 @@ EXEC_COMMAND_CMP_RUN:
 	syscall
 	j	EXEC_COMMAND_END
 EXEC_COMMAND_CHAT:
+	la	$a0, COMMAND_BUF
 	la	$a1, _CHAT
-	jal str_compare
+	jal	str_compare
 	# if !compare return 0
 	beq	$v0, $zero, EXEC_COMMAND_CHAT
 	# print result
@@ -797,7 +800,6 @@ EXEC_COMMAND_CHAT:
 	j	EXEC_COMMAND_END
 EXEC_COMMAND_ERROR:
 	la	$a0, _ERROR
-	la	$a0, _CHAT_RESULT
 	addi	$v0, $zero, 4
 	syscall
 	j	EXEC_COMMAND_END
