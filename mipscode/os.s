@@ -760,7 +760,7 @@ CLEAR_COMMAND_BUF_LOOP:
 	sw	$zero, 0($t1)
 	addi	$t0, $t0, 4
 	bne	$t0, $t2, CLEAR_COMMAND_BUF_LOOP
-	pop	$ra, $a0, $t0
+	pop	$ra, $a0, $t0, $t1, $t2
 	jr	$ra
 	
 str_compare:
