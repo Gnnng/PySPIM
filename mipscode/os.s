@@ -281,7 +281,7 @@ DEAD_LOOP_2:
 	jal	EXEC_COMMAND
 	la	$t0, COMMAND_LEN
 	sw	$zero, 0($t0)
-	jal	CLEAR_COMMAND_BUF
+	# jal	CLEAR_COMMAND_BUF
 	j	DEAD_LOOP
 #========global functions========#
 #========Load_Byte========#
@@ -716,7 +716,7 @@ READ_COMMAND_BUF_READ:
 READ_COMMAND_BUF_ENTER:
 	#buf[len] = 0
 	la	$a1, COMMAND_BUF
-	add	$a1, $a1, $s0
+	add	$a1, $a1, $s1
 	add	$a0, $zero, $zero
 	jal	Save_Byte
 	#print char
