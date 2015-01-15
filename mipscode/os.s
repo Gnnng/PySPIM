@@ -129,9 +129,10 @@ INT08_PRINT_STRING:
 	#syscall print string
 	push	$ra, $v0, $a0, $a1, $t0, $t1
 	#mov $t0, $a0
+	# li 	$v1, 0xffff0200
+	# lw	$at, 0($a0)
+	# sw	$at, 0($v1)
 	add	$t0, $a0, $zero
-	li 	$v1, 0xffff0200
-	sw	$a0, 0($v1)
 	#sll	$a1, $a1, 16
 	#add	$t1, $zero, $a1
 PRINT_STRING_LOOP:
@@ -235,6 +236,15 @@ INT08_READ_CHAR_LOOP_END:
 	pop	$ra, $t0, $t1
 	jr 	$ra
 .data 0x00000900
+	COMMAND_BUF:	.word	0
+			.word	0
+			.word	0
+			.word	0
+			.word	0
+			.word	0
+			.word	0
+			.word	0
+			.word	0
 	_LIST_RESULT:	.asciiz "list root\n"
 	_ERROR:	.asciiz	"error command!\n"
 	WEIGHT:	.word	40
@@ -257,15 +267,7 @@ INT08_READ_CHAR_LOOP_END:
 	Typing_State:	.word	0
 	Domain_Word:	.word	0
 	COMMAND_LEN:	.word	0
-	COMMAND_BUF:	.word	0
-			.word	0
-			.word	0
-			.word	0
-			.word	0
-			.word	0
-			.word	0
-			.word	0
-			.word	0
+	
 .text 0x00001000
 #Kernel initialization begin
 KERNEL_INIT:
@@ -281,7 +283,12 @@ DEAD_LOOP_2:
 	jal	READ_COMMAND_BUF
 	jal	EXEC_COMMAND
 	la	$t0, COMMAND_LEN
-	sw	$zero, 0($t0)
+	sw	$zero, 0($t0) # clear len
+
+	li 	$v1, 0xffff0200
+	la 	$a0, COMMAND_BUF
+	lw	$at, 0($a0)
+	sw	$at, 0($v1)
 	# jal	CLEAR_COMMAND_BUF
 	j	DEAD_LOOP
 #========global functions========#
@@ -326,9 +333,9 @@ Save_Byte_loop:
 Save_Byte_end:
 	li	$t3, 0xffffffff
 	xor	$t2, $t2, $t3
-	and	$v0, $t2, $t1
-	or	$v0, $a0, $v0
-	sw	$v0, 0($a0)
+	and	$t3, $t2, $t1
+	or	$t3, $a0, $t3
+	sw	$t3, 0($a1)
 	pop	$ra, $a0, $a1, $t0, $t1, $t2, $t3, $t4
 	jr	$ra
 #========SHOW_CHAR========#
@@ -730,6 +737,10 @@ READ_COMMAND_BUF_COMMON:
 	addi	$s1, $s1, 1
 	la	$t0, COMMAND_LEN
 	sw	$s1, 0($t0)
+	# print char
+	add	$a0, $s0, $zero
+	addi	$v0, $zero, 11
+	syscall
 	# continue
 	j	READ_COMMAND_BUF_LOOP
 READ_COMMAND_BUF_END:
