@@ -236,24 +236,20 @@ INT08_READ_CHAR_LOOP_END:
 	pop	$ra, $t0, $t1
 	jr 	$ra
 .data 0x00000900
-	COMMAND_BUF:	.word	0
-			.word	0
-			.word	0
-			.word	0
-			.word	0
-			.word	0
-			.word	0
-			.word	0
-			.word	0
-	_LIST_RESULT:	.asciiz "list root\n"
-	_ERROR:	.asciiz	"error command!\n"
 	WEIGHT:	.word	40
 	HEIGHT:	.word	30
 	hi:	.asciiz	"Hello World\n"
 	_DIR:	.asciiz "root"
 	_ARROW:	.asciiz ">"
 	_LIST:	.asciiz "ls"
-	_LIST2: .asciiz "ls"
+	_EDIT: .asciiz "vi"
+	_RUN:	.asciiz	"run"
+	_CHAT:	.asciiz	"chat"
+	_LIST_RESULT:	.asciiz "list root\n"
+	_EDIT_RESULT:	.asciiz	"edit text\n"
+	_RUN_RESULT:	asciiz	"run program\n"
+	_CHAT_RESULT:	asciiz	"chat with me\n"
+	_ERROR:	.asciiz	"error command!\n"
 	KeyBoard_buf:	.word	0
 			.word	0
 			.word	0
@@ -267,7 +263,15 @@ INT08_READ_CHAR_LOOP_END:
 	Typing_State:	.word	0
 	Domain_Word:	.word	0
 	COMMAND_LEN:	.word	0
-	
+	COMMAND_BUF:	.word	0
+			.word	0
+			.word	0
+			.word	0
+			.word	0
+			.word	0
+			.word	0
+			.word	0
+			.word	0
 .text 0x00001000
 #Kernel initialization begin
 KERNEL_INIT:
@@ -696,7 +700,7 @@ READ_COMMAND_BUF_LOOP:
 	j	READ_COMMAND_BUF_COMMON
 READ_COMMAND_BUF_BACKSPACE:
 	# if len==0, continue
-	beq	$s0, $zero, READ_COMMAND_BUF_LOOP
+	beq	$s1, $zero, READ_COMMAND_BUF_LOOP
 	# else len--
 	addi	$s1, $s1, -1
 	la	$t0, COMMAND_LEN
@@ -749,25 +753,54 @@ READ_COMMAND_BUF_END:
 #=====EXEC_COMMAND=====#
 EXEC_COMMAND:
 	push	$ra, $a0, $a1
-	la 	$a0, COMMAND_BUF
-	li 	$v0, 4
-	syscall
 	# compare
 	la	$a0, COMMAND_BUF
+EXEC_COMMAND_CMP_LS:
 	la	$a1, _LIST
 	jal str_compare
-	# jal	strcmp
 	# if !compare return 0
-	beq	$v0, $zero, EXEC_COMMAND_ERROR
+	beq	$v0, $zero, EXEC_COMMAND_CMP_EDIT
 	# print result
 	la	$a0, _LIST_RESULT
 	addi	$v0, $zero, 4
 	syscall
 	j	EXEC_COMMAND_END
-EXEC_COMMAND_ERROR:
-	la	$a0, _ERROR
+EXEC_COMMAND_CMP_EDIT:
+	la	$a1, _EDIT
+	jal str_compare
+	# if !compare return 0
+	beq	$v0, $zero, EXEC_COMMAND_CMP_RUN
+	# print result
+	la	$a0, _EDIT_RESULT
 	addi	$v0, $zero, 4
 	syscall
+	j	EXEC_COMMAND_END
+EXEC_COMMAND_CMP_RUN:
+	la	$a1, _RUN
+	jal str_compare
+	# if !compare return 0
+	beq	$v0, $zero, EXEC_COMMAND_CHAT
+	# print result
+	la	$a0, _RUN_RESULT
+	addi	$v0, $zero, 4
+	syscall
+	j	EXEC_COMMAND_END
+EXEC_COMMAND_CHAT:
+	la	$a1, _CHAT
+	jal str_compare
+	# if !compare return 0
+	beq	$v0, $zero, EXEC_COMMAND_CHAT
+	# print result
+	la	$a0, _CHAT_RESULT
+	addi	$v0, $zero, 4
+	syscall
+	j	EXEC_COMMAND_END
+EXEC_COMMAND_ERROR:
+	la	$a0, _ERROR
+	la	$a0, _CHAT_RESULT
+	addi	$v0, $zero, 4
+	syscall
+	j	EXEC_COMMAND_END
 EXEC_COMMAND_END:
 	pop	$ra, $a0, $a1
 	jr	$ra
