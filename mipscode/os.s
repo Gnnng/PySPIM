@@ -109,8 +109,13 @@ INT08_SERVICE:
 INT08_JUMP_PRINT_STRING:
 	#print_string
 	addi	$t0, $zero, 4
-	bne	$v0, $t0, INT08_JUMP_PRINT_CHAR
+	bne	$v0, $t0, INT08_JUMP_READ_STRING
 	jal 	INT08_PRINT_STRING
+INT08_JUMP_READ_STRING:
+	#read_string
+	addi	$t0, $zero, 8
+	bne	$v0, $t0, INT08_JUMP_PRINT_CHAR
+	jal 	INT08_READ_STRING
 INT08_JUMP_PRINT_CHAR:
 	#print_char
 	addi	$t0, $zero, 11
@@ -235,6 +240,70 @@ INT08_READ_CHAR_LOOP_END:
 	jal	GET_FROM_KEYBOARD_BUF
 	pop	$ra, $t0, $t1
 	jr 	$ra
+INT08_READ_STRING:
+	push	$ra, $a0, $a1, $s0, $s1, $s2, $s3, $t0
+	# s0 = a0 is the first addr where you want to save the string
+	# s1 = a1 is the max length of the buff
+	add	$s0, $a0, $zero
+	add	$s1, $a1, $zero
+	# s2 = 0 is the current length
+	add	$s2, $zero, $zero
+READ_STRING_LOOP:
+	# s3 = v0 is the current char
+	jal	INT08_READ_CHAR
+	add	$s3, $v0, $zero
+	# if s3 = backspace
+	addi	$t0, $zero, 8
+	beq	$s3, $t0, READ_STRING_BACKSPACE
+	# if s3 = enter
+	addi	$t0, $zero, 10
+	beq	$s3, $t0, READ_STRING_ENTER
+	# else
+	j	READ_STRING_COMMON
+READ_STRING_BACKSPACE:
+	# if current len == 0, continue
+	beq	$s2, $zero, READ_STRING_LOOP
+	# else len--
+	addi	$s2, $s2, -1
+	# buf[len] = 0
+	add	$a0, $zero, $zero
+	add	$a1, $s0, $s2
+	jal	Save_Byte
+	# print backspace
+	add	$a0, $s3, $zero
+	jal	INT08_PRINT_CHAR
+	#continue
+	j	READ_STRING_LOOP
+READ_STRING_ENTER:
+	# buf[len] = 0
+	add	$a0, $zero, $zero
+	add	$a1, $s0, $s2
+	jal	Save_Byte
+	# len++
+	addi	$s2, $s2, 1
+	# print enter
+	add	$a0, $s3, $zero
+	jal	INT08_PRINT_CHAR
+	#break
+	j	READ_STRING_END
+READ_STRING_COMMON:
+	# if current len == 31, continue
+	addi	$t0, $zero, 31
+	beq	$s2, $t0, READ_STRING_LOOP
+	# else buf[len] = s3
+	add	$a0, $s3, $zero
+	add	$a1, $s0, $s2
+	jal	Save_Byte
+	# len++
+	addi	$s2, $s2, 1
+	# print char
+	add	$a0, $s3, $zero
+	jal	INT08_PRINT_CHAR
+	#continue
+	j	READ_STRING_LOOP
+READ_STRING_END:
+	pop	$ra, $a0, $a1, $s0, $s1, $s2, $s3, $t0
+	jr	$ra
 .data 0x00000900
 	WEIGHT:	.word	40
 	HEIGHT:	.word	30
@@ -677,78 +746,12 @@ COMPARE_STRING_LOOP_END:
 	jr	$ra
 #=====READ_COMMAND_BUF=====#
 READ_COMMAND_BUF:
-	push	$ra, $a0, $a1, $t0, $t1, $s0, $s1
-READ_COMMAND_BUF_LOOP:
-	#read char
-	addi	$v0, $zero, 12
+	push	$ra, $a0, $a1
+	la	$a0, COMMAND_BUF
+	addi	$a1, $zero, 32
+	addi	$v0, $zero, 8
 	syscall
-	# s0 = a0 = get_char
-	add	$s0, $v0, $zero
-	add	$a0, $s0, $zero
-	# s1 = len
-	la	$s1, COMMAND_LEN
-	lw	$s1, 0($s1)
-	# a1 = buf
-	la	$a1, COMMAND_BUF
-	# if a0 = backspace
-	addi	$t0, $zero, 8
-	beq	$a0, $t0, READ_COMMAND_BUF_BACKSPACE
-	# if a0 = enter
-	addi	$t0, $zero, 10
-	beq	$a0, $t0, READ_COMMAND_BUF_ENTER
-	# else
-	j	READ_COMMAND_BUF_COMMON
-READ_COMMAND_BUF_BACKSPACE:
-	# if len==0, continue
-	beq	$s1, $zero, READ_COMMAND_BUF_LOOP
-	# else len--
-	addi	$s1, $s1, -1
-	la	$t0, COMMAND_LEN
-	sw	$s1, 0($t0)
-	# buf[len] = 0
-	add	$a0, $zero, $zero
-	add	$a1, $a1, $s1 # buf+len
-	jal	Save_Byte
-	# print backspace
-	add	$a0, $s0, $zero
-	addi	$v0, $zero, 11
-	syscall
-	# continue
-	j	READ_COMMAND_BUF_LOOP
-READ_COMMAND_BUF_ENTER:
-	# buf[len] = 0
-	add	$a0, $zero, $zero
-	add	$a1, $a1, $s1 # buf + len
-	jal	Save_Byte
-	# len++
-	addi	$s1, $s1, 1
-	la	$t0, COMMAND_LEN
-	sw	$s1, 0($t0)
-	# print enter
-	add	$a0, $s0, $zero
-	addi	$v0, $zero, 11
-	syscall
-	# break
-	j	READ_COMMAND_BUF_END
-READ_COMMAND_BUF_COMMON:
-	# if len==31, continue
-	addi	$t0, $zero, 31
-	beq	$s1, $t0, READ_COMMAND_BUF_LOOP
-	# else buf[len] = a0
-	add	$a1, $a1, $s1
-	jal	Save_Byte
-	# len++
-	addi	$s1, $s1, 1
-	la	$t0, COMMAND_LEN
-	sw	$s1, 0($t0)
-	# print char
-	add	$a0, $s0, $zero
-	addi	$v0, $zero, 11
-	syscall
-	# continue
-	j	READ_COMMAND_BUF_LOOP
-READ_COMMAND_BUF_END:
-	pop	$ra, $a0, $a1, $t0, $t1, $s0, $s1
+	pop	$ra, $a0, $a1
 	jr	$ra
 #=====EXEC_COMMAND=====#
 EXEC_COMMAND:
