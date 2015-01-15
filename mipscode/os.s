@@ -242,13 +242,13 @@ INT08_READ_CHAR_LOOP_END:
 	_DIR:	.asciiz "root"
 	_ARROW:	.asciiz ">"
 	_LIST:	.asciiz "ls"
-	_EDIT: .asciiz "vi"
+	_EDIT: .asciiz "edit"
 	_RUN:	.asciiz	"run"
 	_CHAT:	.asciiz	"chat"
 	_LIST_RESULT:	.asciiz "list root\n"
 	_EDIT_RESULT:	.asciiz	"edit text\n"
-	_RUN_RESULT:	asciiz	"run program\n"
-	_CHAT_RESULT:	asciiz	"chat with me\n"
+	_RUN_RESULT:	.asciiz	"run program\n"
+	_CHAT_RESULT:	.asciiz	"chat with me\n"
 	_ERROR:	.asciiz	"error command!\n"
 	KeyBoard_buf:	.word	0
 			.word	0

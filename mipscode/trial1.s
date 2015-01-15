@@ -100,7 +100,7 @@ INT08_PRINT_CHAR:
 	#if a0 = \0
 	beq	$a0, $zero, INT08_PRINT_CHAR_END
 	#if a0 = enter
-	addi	$t1, $zero, 0xd
+	addi	$t1, $zero, 10
 	bne	$a0, $t1, INT08_PRINT_CHAR_JUDGE_BACKSPACE
 	add	$a1, $zero, $zero
 	addi	$a2, $a2, 1
@@ -168,7 +168,7 @@ READ_COMMAND_BUF_LOOP:
 	addi	$t0, $zero, 8
 	beq	$a0, $t0, READ_COMMAND_BUF_BACKSPACE
 	# if a0 = enter
-	addi	$t0, $zero, 0xd
+	addi	$t0, $zero, 10
 	beq	$a0, $t0, READ_COMMAND_BUF_ENTER
 	# else
 	j	READ_COMMAND_BUF_COMMON
@@ -476,8 +476,8 @@ EXEC_COMMAND_END:
 	_CHAT:	.asciiz	"chat"
 	_LIST_RESULT:	.asciiz "list root\n"
 	_EDIT_RESULT:	.asciiz	"edit text\n"
-	_RUN_RESULT:	asciiz	"run program\n"
-	_CHAT_RESULT:	asciiz	"chat with me\n"
+	_RUN_RESULT:	.asciiz	"run program\n"
+	_CHAT_RESULT:	.asciiz	"chat with me\n"
 	_ERROR:	.asciiz	"error command!\n"
 	KeyBoard_buf:	.word	0
 			.word	0
