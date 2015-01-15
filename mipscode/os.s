@@ -792,7 +792,7 @@ EXEC_COMMAND_CHAT:
 	la	$a1, _CHAT
 	jal	str_compare
 	# if !compare return 0
-	beq	$v0, $zero, EXEC_COMMAND_CHAT
+	beq	$v0, $zero, EXEC_COMMAND_ERROR
 	# print result
 	la	$a0, _CHAT_RESULT
 	addi	$v0, $zero, 4
