@@ -130,8 +130,8 @@ INT08_PRINT_STRING:
 	push	$ra, $v0, $a0, $a1, $t0, $t1
 	#mov $t0, $a0
 	add	$t0, $a0, $zero
-	li 	 	$v1, 0xffff0200
-	sw 		$a0, 0($v1)
+	li 	$v1, 0xffff0200
+	sw	$a0, 0($v1)
 	#sll	$a1, $a1, 16
 	#add	$t1, $zero, $a1
 PRINT_STRING_LOOP:
@@ -236,6 +236,7 @@ INT08_READ_CHAR_LOOP_END:
 	jr 	$ra
 .data 0x00000900
 	_LIST_RESULT:	.asciiz "list root\n"
+	_ERROR:	.asciiz	"error command!\n"
 	WEIGHT:	.word	40
 	HEIGHT:	.word	30
 	hi:	.asciiz	"Hello World\n"
@@ -741,9 +742,14 @@ EXEC_COMMAND:
 	jal str_compare
 	# jal	strcmp
 	# if !compare return 0
-	beq	$v0, $zero, EXEC_COMMAND_END
+	beq	$v0, $zero, EXEC_COMMAND_ERROR
 	# print result
 	la	$a0, _LIST_RESULT
+	addi	$v0, $zero, 4
+	syscall
+	j	EXEC_COMMAND_END
+EXEC_COMMAND_ERROR:
+	la	$a0, _ERROR
 	addi	$v0, $zero, 4
 	syscall
 EXEC_COMMAND_END:
@@ -762,7 +768,7 @@ CLEAR_COMMAND_BUF_LOOP:
 	bne	$t0, $t2, CLEAR_COMMAND_BUF_LOOP
 	pop	$ra, $a0, $t0, $t1, $t2
 	jr	$ra
-	
+#=====str_compare=====#	
 str_compare:
 	push $t0, $t1, $t2, $t3, $t4, $t5
 	addi $t1,$zero,0
