@@ -241,13 +241,15 @@ INT08_READ_CHAR_LOOP_END:
 	pop	$ra, $t0, $t1
 	jr 	$ra
 INT08_READ_STRING:
-	push	$ra, $a0, $a1, $s0, $s1, $s2, $s3, $t0
+	push	$ra, $a0, $a1, $a2, $s0, $s1, $s2, $s3, $s4, $t0
 	# s0 = a0 is the first addr where you want to save the string
 	# s1 = a1 is the max length of the buff
 	add	$s0, $a0, $zero
 	add	$s1, $a1, $zero
 	# s2 = 0 is the current length
 	add	$s2, $zero, $zero
+	# s4 = eof sig
+	add	$s4, $a2, $zero
 READ_STRING_LOOP:
 	# s3 = v0 is the current char
 	jal	INT08_READ_CHAR
@@ -256,8 +258,8 @@ READ_STRING_LOOP:
 	addi	$t0, $zero, 8
 	beq	$s3, $t0, READ_STRING_BACKSPACE
 	# if s3 = enter
-	addi	$t0, $zero, 10
-	beq	$s3, $t0, READ_STRING_ENTER
+	add	$t0, $zero, $s4
+	beq	$s3, $t0, READ_STRING_EOF
 	# else
 	j	READ_STRING_COMMON
 READ_STRING_BACKSPACE:
@@ -274,7 +276,7 @@ READ_STRING_BACKSPACE:
 	jal	INT08_PRINT_CHAR
 	#continue
 	j	READ_STRING_LOOP
-READ_STRING_ENTER:
+READ_STRING_EOF:
 	# buf[len] = 0
 	add	$a0, $zero, $zero
 	add	$a1, $s0, $s2
@@ -282,7 +284,7 @@ READ_STRING_ENTER:
 	# len++
 	addi	$s2, $s2, 1
 	# print enter
-	add	$a0, $s3, $zero
+	addi	$a0, $zero, 10
 	jal	INT08_PRINT_CHAR
 	#break
 	j	READ_STRING_END
@@ -302,7 +304,7 @@ READ_STRING_COMMON:
 	#continue
 	j	READ_STRING_LOOP
 READ_STRING_END:
-	pop	$ra, $a0, $a1, $s0, $s1, $s2, $s3, $t0
+	pop	$ra, $a0, $a1, $a2, $s0, $s1, $s2, $s3, $s4, $t0
 	jr	$ra
 .data 0x00000900
 	WEIGHT:	.word	40
@@ -749,6 +751,8 @@ READ_COMMAND_BUF:
 	push	$ra, $a0, $a1
 	la	$a0, COMMAND_BUF
 	addi	$a1, $zero, 32
+	# end with enter
+	addi	$a2, $zero, 10
 	addi	$v0, $zero, 8
 	syscall
 	pop	$ra, $a0, $a1
@@ -861,3 +865,85 @@ str_compare:
 		addi $v0,$zero,1
 		pop $t0, $t1, $t2, $t3, $t4, $t5
 		jr $ra
+#=====EDITOR=====#			
+EDITOR:
+	push	$ra, $a0, $a1, $a2
+	jal	CLEAR_SCREEN
+ENTER_TEXT_NAME:
+	la	$a0, TEXT_NAME
+	addi	$a1, $zero, 32
+	addi	$a2, $zero, 10
+	addi	$v0, $zero, 8
+	syscall
+	jal	CLEAR_SCREEN
+ENTER_CONTENT:
+	la	$a0, TEXT_BUF
+	addi	$a1, $zero, 512
+	#end sig esc
+	addi	$a2, $zero, 27
+	addi	$v0, $zero, 8
+	syscall
+	jal	CLEAR_SCREEN
+ENTER_SAVE_MODE:
+	la	$a0, TEXT_MODE
+	addi	$a1, $zero, 4
+	#end sig esc
+	addi	$a2, $zero, 10
+	addi	$v0, $zero, 8
+	syscall
+	jal	CLEAR_SCREEN
+	#end
+	pop	$ra, $a0, $a1, $a2
+	jr	$ra
+#========CLEAR_SCREEN========#
+CLEAR_SCREEN:
+	push	$ra, $a1, $a2, $t0, $t1, $t2
+	# load X, Y
+	la	$t1, WEIGHT
+	lw	$t1, 0($t1)
+	la	$t2, HEIGHT
+	lw	$t2, 0($t2)
+	#LOOP
+	add	$a2, $zero, $zero
+CLEAR_SCREEN_LOOP1:
+	add	$a1, $zero, $zero
+CLEAR_SCREEN_LOOP2:
+	jal	GET_VRAM_ADDR
+	add	$t0, $zero, $v0
+	sw	$zero, 0($t0)
+	addi	$a1, $a1, 1
+	bne	$a1, $t1, CLEAR_SCREEN_LOOP2
+	addi	$a2, $a2, 1
+	bne	$a2, $t2, CLEAR_SCREEN_LOOP1
+	#clear last loop
+	add	$a1, $zero, $zero
+	addi	$a2, $a2, -1
+CLEAR_SCREEN_CLEAR_LAST:
+	jal	GET_VRAM_ADDR
+	add	$t0, $zero, $v0
+	sw	$zero, 0($t0)
+	addi	$a1, $a1, 1
+	bne	$a1, $t1, CLEAR_SCREEN_CLEAR_LAST
+	add	$a1, $zero, $zero
+	add	$a2, $zero, $zero
+	lui	$t0, 0xffff
+	sw	$a1, 0($t0) #X
+	sw	$a2, 4($t0) #Y
+	#return
+	pop	$ra, $a1, $a2, $t0, $t1, $t2
+	jr	$ra
+#=====data=====#
+.data 0x2500
+	_QUIT:	.asciiz	"q"
+	_WRITE_QUIT:	.asciiz	"wq"
+	TEXT_MODE:	.word	0
+	TEXT_NAME:	.word	0
+			.word	0
+			.word	0
+			.word	0
+			.word	0
+			.word	0
+			.word	0
+			.word	0
+	TEXT_BUF:	.word	0
+	

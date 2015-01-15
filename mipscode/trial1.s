@@ -53,8 +53,13 @@ INT08_SERVICE:
 INT08_JUMP_PRINT_STRING:
 	#print_string
 	addi	$t0, $zero, 4
-	bne	$v0, $t0, INT08_JUMP_PRINT_CHAR
+	bne	$v0, $t0, INT08_JUMP_READ_STRING
 	jal 	INT08_PRINT_STRING
+INT08_JUMP_READ_STRING:
+	#read_string
+	addi	$t0, $zero, 8
+	bne	$v0, $t0, INT08_JUMP_PRINT_CHAR
+	jal 	INT08_READ_STRING
 INT08_JUMP_PRINT_CHAR:
 	#print_char
 	addi	$t0, $zero, 11
@@ -100,7 +105,7 @@ INT08_PRINT_CHAR:
 	#if a0 = \0
 	beq	$a0, $zero, INT08_PRINT_CHAR_END
 	#if a0 = enter
-	addi	$t1, $zero, 10
+	addi	$t1, $zero, 0xd
 	bne	$a0, $t1, INT08_PRINT_CHAR_JUDGE_BACKSPACE
 	add	$a1, $zero, $zero
 	addi	$a2, $a2, 1
@@ -148,77 +153,84 @@ INT08_PRINT_CHAR_END:
 	pop	$ra, $v0, $a0, $a1, $a2, $t0, $t1
 	#return
 	jr	$ra
-READ_COMMAND_BUF:
-	push	$ra, $a0, $a1, $t0, $t1, $s0, $s1
-READ_COMMAND_BUF_LOOP:
-	# read keyboard hit
-	# s0 = get_char, s1 = buf_len
-	DEADLOOP:
-	beq	$at, $zero, DEADLOOP
+INT08_READ_STRING:
+	push	$ra, $a0, $a1, $a2, $s0, $s1, $s2, $s3, $s4, $t0
+	# s0 = a0 is the first addr where you want to save the string
+	# s1 = a1 is the max length of the buff
+	add	$s0, $a0, $zero
+	add	$s1, $a1, $zero
+	# s2 = 0 is the current length
+	add	$s2, $zero, $zero
+	# s4 = eof sig
+	add	$s4, $a2, $zero
+READ_STRING_LOOP:
+	# s3 = v0 is the current char
+READ_CHAR_LOOP:
+	beq	$at, $zero, READ_CHAR_LOOP
 	add	$at, $zero, $zero
-	# s0 = a0 = get_char
-	add	$s0, $v0, $zero
-	add	$a0, $s0, $zero
-	# s1 = len
-	la	$s1, COMMAND_LEN
-	lw	$s1, 0($s1)
-	# a1 = buf
-	la	$a1, COMMAND_BUF
-	# if a0 = backspace
+	add	$s3, $v0, $zero
+	# if s3 = backspace
 	addi	$t0, $zero, 8
-	beq	$a0, $t0, READ_COMMAND_BUF_BACKSPACE
-	# if a0 = enter
-	addi	$t0, $zero, 10
-	beq	$a0, $t0, READ_COMMAND_BUF_ENTER
+	beq	$s3, $t0, READ_STRING_BACKSPACE
+	# if s3 = eof
+	add	$t0, $zero, $s4
+	beq	$s3, $t0, READ_STRING_EOF
 	# else
-	j	READ_COMMAND_BUF_COMMON
-READ_COMMAND_BUF_BACKSPACE:
-	# if len==0, continue
-	beq	$s0, $zero, READ_COMMAND_BUF_LOOP
+	j	READ_STRING_COMMON
+READ_STRING_BACKSPACE:
+	# if current len == 0, continue
+	beq	$s2, $zero, READ_STRING_LOOP
 	# else len--
-	addi	$s1, $s1, -1
-	la	$t0, COMMAND_LEN
-	sw	$s1, 0($t0)
+	addi	$s2, $s2, -1
 	# buf[len] = 0
 	add	$a0, $zero, $zero
-	add	$a1, $a1, $s1 # buf+len
+	add	$a1, $s0, $s2
 	jal	Save_Byte
 	# print backspace
-	add	$a0, $s0, $zero
-	addi	$v0, $zero, 11
-	syscall
-	# continue
-	j	READ_COMMAND_BUF_LOOP
-READ_COMMAND_BUF_ENTER:
+	add	$a0, $s3, $zero
+	jal	INT08_PRINT_CHAR
+	#continue
+	j	READ_STRING_LOOP
+READ_STRING_EOF:
 	# buf[len] = 0
 	add	$a0, $zero, $zero
-	add	$a1, $a1, $s1 # buf + len
+	add	$a1, $s0, $s2
 	jal	Save_Byte
 	# len++
-	addi	$s1, $s1, 1
-	la	$t0, COMMAND_LEN
-	sw	$s1, 0($t0)
+	addi	$s2, $s2, 1
 	# print enter
-	add	$a0, $s0, $zero
-	addi	$v0, $zero, 11
-	syscall
-	# break
-	j	READ_COMMAND_BUF_END
-READ_COMMAND_BUF_COMMON:
-	# if len==31, continue
-	addi	$t0, $zero, 31
-	beq	$s1, $t0, READ_COMMAND_BUF_LOOP
-	# else buf[len] = a0
-	add	$a1, $a1, $s1
+	addi	$a0, $zero, 0xd
+	jal	INT08_PRINT_CHAR
+	#break
+	j	READ_STRING_END
+READ_STRING_COMMON:
+	# if current len == s1-1, continue
+	add	$t0, $s1, $zero
+	addi	$t0, $t0, -1
+	beq	$s2, $t0, READ_STRING_LOOP
+	# else buf[len] = s3
+	add	$a0, $s3, $zero
+	add	$a1, $s0, $s2
 	jal	Save_Byte
 	# len++
-	addi	$s1, $s1, 1
-	la	$t0, COMMAND_LEN
-	sw	$s1, 0($t0)
-	# continue
-	j	READ_COMMAND_BUF_LOOP
-READ_COMMAND_BUF_END:
-	pop	$ra, $a0, $a1, $t0, $t1, $s0, $s1
+	addi	$s2, $s2, 1
+	# print char
+	add	$a0, $s3, $zero
+	jal	INT08_PRINT_CHAR
+	#continue
+	j	READ_STRING_LOOP
+READ_STRING_END:
+	pop	$ra, $a0, $a1, $a2, $s0, $s1, $s2, $s3, $s4, $t0
+	jr	$ra
+READ_COMMAND_BUF:
+	push	$ra, $a0, $a1
+	# load param
+	la	$a0, COMMAND_BUF
+	addi	$a1, $zero, 32
+	addi	$a2, $zero, 0xd
+	# syscall
+	jal	INT08_READ_STRING
+	pop	$ra, $a0, $a1
 	jr	$ra
 #========Load_Byte========#
 Load_Byte:
@@ -274,7 +286,7 @@ SYS_INIT:
 	la	$t0, int08
 	la	$t1, INT08_SERVICE
 	sw	$t1, 0($t0)
-	li 	$sp, 0x3ffc
+	li 	$sp, 0x7ffc
 	j 	SYS_INIT_BACK
 CLEAR_COMMAND_BUF:
 	push	$ra, $a0, $t0, $t1, $t2
@@ -391,6 +403,43 @@ PAGE_SCROLL_CLEAR_LAST:
 	bne	$a1, $t1, PAGE_SCROLL_CLEAR_LAST
 	#return
 	pop	$ra, $a1, $a2, $t0, $t1, $t2, $t3
+	jr	$ra
+#========CLEAR_SCREEN========#
+CLEAR_SCREEN:
+	push	$ra, $a1, $a2, $t0, $t1, $t2
+	# load X, Y
+	la	$t1, WEIGHT
+	lw	$t1, 0($t1)
+	la	$t2, HEIGHT
+	lw	$t2, 0($t2)
+	#LOOP
+	add	$a2, $zero, $zero
+CLEAR_SCREEN_LOOP1:
+	add	$a1, $zero, $zero
+CLEAR_SCREEN_LOOP2:
+	jal	GET_VRAM_ADDR
+	add	$t0, $zero, $v0
+	sw	$zero, 0($t0)
+	addi	$a1, $a1, 1
+	bne	$a1, $t1, CLEAR_SCREEN_LOOP2
+	addi	$a2, $a2, 1
+	bne	$a2, $t2, CLEAR_SCREEN_LOOP1
+	#clear last loop
+	add	$a1, $zero, $zero
+	addi	$a2, $a2, -1
+CLEAR_SCREEN_CLEAR_LAST:
+	jal	GET_VRAM_ADDR
+	add	$t0, $zero, $v0
+	sw	$zero, 0($t0)
+	addi	$a1, $a1, 1
+	bne	$a1, $t1, CLEAR_SCREEN_CLEAR_LAST
+	add	$a1, $zero, $zero
+	add	$a2, $zero, $zero
+	lui	$t0, 0xffff
+	sw	$a1, 0($t0) #X
+	sw	$a2, 4($t0) #Y
+	#return
+	pop	$ra, $a1, $a2, $t0, $t1, $t2
 	jr	$ra	
 #========SHOW_CHAR========#
 SHOW_CHAR:
@@ -429,9 +478,16 @@ EXEC_COMMAND_CMP_EDIT:
 	# if !compare return 0
 	beq	$v0, $zero, EXEC_COMMAND_CMP_RUN
 	# print result
-	la	$a0, _EDIT_RESULT
-	addi	$v0, $zero, 4
-	syscall
+	#la	$a0, _EDIT_RESULT
+	#addi	$v0, $zero, 4
+	#syscall
+	jal	EDITOR
+	la	$a0, TEXT_NAME
+	jal	INT08_PRINT_STRING
+	la	$a0, TEXT_MODE
+	jal	INT08_PRINT_STRING
+	la	$a0, TEXT_BUF
+	jal	INT08_PRINT_STRING
 	j	EXEC_COMMAND_END
 EXEC_COMMAND_CMP_RUN:
 	la	$a0, COMMAND_BUF
@@ -463,8 +519,38 @@ EXEC_COMMAND_ERROR:
 EXEC_COMMAND_END:
 	pop	$ra, $a0, $a1
 	jr	$ra
-	
-.data 0x00000900
+
+.text 0x2000
+EDITOR:
+	push	$ra, $a0, $a1, $a2
+	jal	CLEAR_SCREEN
+ENTER_TEXT_NAME:
+	la	$a0, TEXT_NAME
+	addi	$a1, $zero, 32
+	addi	$a2, $zero, 0xd
+	addi	$v0, $zero, 8
+	jal	INT08_READ_STRING
+	jal	CLEAR_SCREEN
+ENTER_CONTENT:
+	la	$a0, TEXT_BUF
+	addi	$a1, $zero, 512
+	#end sig esc
+	addi	$a2, $zero, 27
+	addi	$v0, $zero, 8
+	jal	INT08_READ_STRING
+	jal	CLEAR_SCREEN
+ENTER_SAVE_MODE:
+	la	$a0, TEXT_MODE
+	addi	$a1, $zero, 4
+	#end sig esc
+	addi	$a2, $zero, 0xd
+	addi	$v0, $zero, 8
+	jal	INT08_READ_STRING
+	jal	CLEAR_SCREEN
+	#end
+	pop	$ra, $a0, $a1, $a2
+	jr	$ra
+.data 0x2500
 	WEIGHT:	.word	40
 	HEIGHT:	.word	30
 	hi:	.asciiz	"Hello World\n"
@@ -501,3 +587,16 @@ EXEC_COMMAND_END:
 			.word	0
 			.word	0
 			.word	0
+	_QUIT:	.asciiz	"q"
+	_WRITE_QUIT:	.asciiz	"wq"
+	TEXT_MODE:	.word	0
+	TEXT_NAME:	.word	0
+			.word	0
+			.word	0
+			.word	0
+			.word	0
+			.word	0
+			.word	0
+			.word	0
+	TEXT_BUF:	.word	0
+	
