@@ -100,7 +100,7 @@ INT08_PRINT_CHAR:
 	#if a0 = \0
 	beq	$a0, $zero, INT08_PRINT_CHAR_END
 	#if a0 = enter
-	addi	$t1, $zero, 10
+	addi	$t1, $zero, 0xd
 	bne	$a0, $t1, INT08_PRINT_CHAR_JUDGE_BACKSPACE
 	add	$a1, $zero, $zero
 	addi	$a2, $a2, 1
@@ -156,49 +156,68 @@ READ_COMMAND_BUF_LOOP:
 	DEADLOOP:
 	beq	$at, $zero, DEADLOOP
 	add	$at, $zero, $zero
+	# s0 = a0 = get_char
 	add	$s0, $v0, $zero
-	la	$t1, COMMAND_LEN
-	lw	$s1, 0($t1)
-	# if s0 != backspace
-	addi	$t0, $zero, 8
-	bne	$s0, $t0, READ_COMMAND_BUF_READ
-	#if command_len == 0, loop
-	beq	$s1, $zero, READ_COMMAND_BUF_LOOP
-	# buf[len] = 0;
-	la	$a1, COMMAND_BUF
-	add	$a1, $a1, $s1
-	add	$a0, $zero, $zero
-	jal	Save_Byte
-	# len--;
-	addi	$s1, $s1, -1
-	la	$t1, COMMAND_LEN
-	sw	$s1, 0($t1)
-	j	READ_COMMAND_BUF_LOOP
-READ_COMMAND_BUF_READ:
-	#if len==32, loop
-	addi	$t1, $zero, 32
-	beq	$s1, $t1, READ_COMMAND_BUF_LOOP
-	#if a0 = enter
-	addi	$t0, $zero, 0xd
-	beq	$s0, $t0, READ_COMMAND_BUF_ENTER
-	# buf[len] = a0
 	add	$a0, $s0, $zero
+	# s1 = len
+	la	$s1, COMMAND_LEN
+	lw	$s1, 0($s1)
+	# a1 = buf
 	la	$a1, COMMAND_BUF
+	# if a0 = backspace
+	addi	$t0, $zero, 8
+	beq	$a0, $t0, READ_COMMAND_BUF_BACKSPACE
+	# if a0 = enter
+	addi	$t0, $zero, 0xd
+	beq	$a0, $t0, READ_COMMAND_BUF_ENTER
+	# else
+	j	READ_COMMAND_BUF_COMMON
+READ_COMMAND_BUF_BACKSPACE:
+	# if len==0, continue
+	beq	$s0, $zero, READ_COMMAND_BUF_LOOP
+	# else len--
+	addi	$s1, $s1, -1
+	la	$t0, COMMAND_LEN
+	sw	$s1, 0($t0)
+	# buf[len] = 0
+	add	$a0, $zero, $zero
+	add	$a1, $a1, $s1 # buf+len
+	jal	Save_Byte
+	# print backspace
+	add	$a0, $s0, $zero
+	addi	$v0, $zero, 11
+	syscall
+	# continue
+	j	READ_COMMAND_BUF_LOOP
+READ_COMMAND_BUF_ENTER:
+	# buf[len] = 0
+	add	$a0, $zero, $zero
+	add	$a1, $a1, $s1 # buf + len
+	jal	Save_Byte
+	# len++
+	addi	$s1, $s1, 1
+	la	$t0, COMMAND_LEN
+	sw	$s1, 0($t0)
+	# print enter
+	add	$a0, $s0, $zero
+	addi	$v0, $zero, 11
+	syscall
+	# break
+	j	READ_COMMAND_BUF_END
+READ_COMMAND_BUF_COMMON:
+	# if len==31, continue
+	addi	$t0, $zero, 31
+	beq	$s1, $t0, READ_COMMAND_BUF_LOOP
+	# else buf[len] = a0
 	add	$a1, $a1, $s1
 	jal	Save_Byte
 	# len++
 	addi	$s1, $s1, 1
-	la	$t1, COMMAND_LEN
-	sw	$s1, 0($t1)
+	la	$t0, COMMAND_LEN
+	sw	$s1, 0($t0)
+	# continue
 	j	READ_COMMAND_BUF_LOOP
-READ_COMMAND_BUF_ENTER:
-	#buf[len] = 0
-	la	$a1, COMMAND_BUF
-	add	$a1, $a1, $s1
-	add	$a0, $zero, $zero
-	jal	Save_Byte
 READ_COMMAND_BUF_END:
-	#syscall
 	pop	$ra, $a0, $a1, $t0, $t1, $s0, $s1
 	jr	$ra
 #========Load_Byte========#
@@ -269,21 +288,6 @@ CLEAR_COMMAND_BUF_LOOP:
 	bne	$t0, $t2, CLEAR_COMMAND_BUF_LOOP
 	pop	$ra, $a0, $t0, $t1, $t2
 	jr	$ra
-EXEC_COMMAND:
-	push	$ra, $a0, $a1
-	la 	$a0, COMMAND_BUF
-	# compare
-	la	$a0, COMMAND_BUF
-	la	$a1, _LIST
-	jal str_compare
-	# jal	strcmp
-	# if !compare return 0
-	beq	$v0, $zero, EXEC_COMMAND_ERROR
-	# print result
-	la	$a0, _LIST_RESULT
-	addi	$v0, $zero, 4
-	syscall
-	j	EXEC_COMMAND_END
 EXEC_COMMAND_ERROR:
 	la	$a0, _ERROR
 	addi	$v0, $zero, 4
@@ -336,38 +340,7 @@ str_compare:
 		addi $v0,$zero,1
 		pop $t0, $t1, $t2, $t3, $t4, $t5
 		jr $ra
-.data
-	_LIST_RESULT:	.asciiz "list root\n"
-	_ERROR:	.asciiz "error\n"
-	WEIGHT:	.word	40
-	HEIGHT:	.word	30
-	hi:	.asciiz	"Hello World\n"
-	_DIR:	.asciiz "root"
-	_ARROW:	.asciiz ">"
-	_LIST:	.asciiz "llss"
-	KeyBoard_buf:	.word	0
-			.word	0
-			.word	0
-			.word	0
-			.word	0
-			.word	0
-			.word	0
-			.word	0
-	KeyBoard_head:	.word	0
-	KeyBoard_tail:	.word	0
-	Typing_State:	.word	0
-	Domain_Word:	.word	0
-	COMMAND_LEN:	.word	0
-	COMMAND_BUF:	.word	0
-			.word	0
-			.word	0
-			.word	0
-			.word	0
-			.word	0
-			.word	0
-			.word	0
-			.word	0
-.text
+
 #========GET_VRAM_ADDR========#
 GET_VRAM_ADDR:
 	push	$ra, $a1, $a2, $t0
@@ -434,4 +407,97 @@ SHOW_CHAR:
 	pop	$ra, $a0, $t0
 	#return
 	jr	$ra
+#=====EXEC_COMMAND=====#
+EXEC_COMMAND:
+	push	$ra, $a0, $a1
+	# compare
+EXEC_COMMAND_CMP_LS:
+	la	$a0, COMMAND_BUF
+	la	$a1, _LIST
+	jal	str_compare
+	# if !compare return 0
+	beq	$v0, $zero, EXEC_COMMAND_CMP_EDIT
+	# print result
+	la	$a0, _LIST_RESULT
+	addi	$v0, $zero, 4
+	syscall
+	j	EXEC_COMMAND_END
+EXEC_COMMAND_CMP_EDIT:
+	la	$a0, COMMAND_BUF
+	la	$a1, _EDIT
+	jal	str_compare
+	# if !compare return 0
+	beq	$v0, $zero, EXEC_COMMAND_CMP_RUN
+	# print result
+	la	$a0, _EDIT_RESULT
+	addi	$v0, $zero, 4
+	syscall
+	j	EXEC_COMMAND_END
+EXEC_COMMAND_CMP_RUN:
+	la	$a0, COMMAND_BUF
+	la	$a1, _RUN
+	jal	str_compare
+	# if !compare return 0
+	beq	$v0, $zero, EXEC_COMMAND_CHAT
+	# print result
+	la	$a0, _RUN_RESULT
+	addi	$v0, $zero, 4
+	syscall
+	j	EXEC_COMMAND_END
+EXEC_COMMAND_CHAT:
+	la	$a0, COMMAND_BUF
+	la	$a1, _CHAT
+	jal	str_compare
+	# if !compare return 0
+	beq	$v0, $zero, EXEC_COMMAND_ERROR
+	# print result
+	la	$a0, _CHAT_RESULT
+	addi	$v0, $zero, 4
+	syscall
+	j	EXEC_COMMAND_END
+EXEC_COMMAND_ERROR:
+	la	$a0, _ERROR
+	addi	$v0, $zero, 4
+	syscall
+	j	EXEC_COMMAND_END
+EXEC_COMMAND_END:
+	pop	$ra, $a0, $a1
+	jr	$ra
 	
+.data 0x00000900
+	WEIGHT:	.word	40
+	HEIGHT:	.word	30
+	hi:	.asciiz	"Hello World\n"
+	_DIR:	.asciiz "root"
+	_ARROW:	.asciiz ">"
+	_LIST:	.asciiz "ls"
+	_EDIT: .asciiz "edit"
+	_RUN:	.asciiz	"run"
+	_CHAT:	.asciiz	"chat"
+	_LIST_RESULT:	.asciiz "list root\n"
+	_EDIT_RESULT:	.asciiz	"edit text\n"
+	_RUN_RESULT:	asciiz	"run program\n"
+	_CHAT_RESULT:	asciiz	"chat with me\n"
+	_ERROR:	.asciiz	"error command!\n"
+	KeyBoard_buf:	.word	0
+			.word	0
+			.word	0
+			.word	0
+			.word	0
+			.word	0
+			.word	0
+			.word	0
+	KeyBoard_head:	.word	0
+	KeyBoard_tail:	.word	0
+	Typing_State:	.word	0
+	Domain_Word:	.word	0
+	COMMAND_LEN:	.word	0
+	COMMAND_BUF:	.word	0
+			.word	0
+			.word	0
+			.word	0
+			.word	0
+			.word	0
+			.word	0
+			.word	0
+			.word	0
