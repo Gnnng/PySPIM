@@ -359,7 +359,6 @@ DEAD_LOOP_2:
 	jal	EXEC_COMMAND
 	la	$t0, COMMAND_LEN
 	sw	$zero, 0($t0) # clear len
-
 	li 	$v1, 0xffff0200
 	la 	$a0, COMMAND_BUF
 	lw	$at, 0($a0)
@@ -779,7 +778,14 @@ EXEC_COMMAND_CMP_EDIT:
 	# if !compare return 0
 	beq	$v0, $zero, EXEC_COMMAND_CMP_RUN
 	# print result
-	la	$a0, _EDIT_RESULT
+	#la	$a0, _EDIT_RESULT
+	#addi	$v0, $zero, 4
+	#syscall
+	jal	EDITOR
+	la	$a0, TEXT_BUF
+	addi	$v0, $zero, 4
+	syscall
+	la	$a0, TEXT_NAME
 	addi	$v0, $zero, 4
 	syscall
 	j	EXEC_COMMAND_END
