@@ -753,7 +753,7 @@ EXEC_COMMAND_END:
 CLEAR_COMMAND_BUF:
 	push	$ra, $a0, $t0, $t1, $t2
 	add	$t0, $zero, $zero
-	li	$a0, COMMAND_BUF
+	la	$a0, COMMAND_BUF
 	li	$t2, 32
 CLEAR_COMMAND_BUF_LOOP:
 	add	$t1, $t0, $a0
